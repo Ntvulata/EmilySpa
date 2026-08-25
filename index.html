@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glow & Relax Spa - Quản Lý Lịch Hẹn & Khách Hàng</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            rose: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              200: '#fecdd3',
+              300: '#fda4af',
+              400: '#fb7185',
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
+              800: '#9f1239',
+              900: '#881337',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="bg-[#fdfbf9] text-slate-800 antialiased min-h-screen flex">
+
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-rose-50 via-white to-amber-50/40 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-rose-100 p-8 space-y-6 relative overflow-hidden">
+      <!-- Decorative Glow -->
+      <div class="absolute -top-16 -right-16 w-36 h-36 bg-rose-200/50 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-amber-200/50 rounded-full blur-2xl"></div>
+
+      <!-- Header / Logo -->
+      <div class="text-center space-y-2 relative">
+        <div id="login-spa-logo-wrapper" class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-rose-500 to-rose-400 text-white mx-auto flex items-center justify-center text-3xl shadow-lg shadow-rose-500/30 overflow-hidden">
+          ✨
+        </div>
+        <h2 id="login-spa-name" class="text-2xl font-extrabold text-slate-800 tracking-tight">Glow & Relax Spa</h2>
+        <p class="text-xs text-slate-500 font-medium">Đăng nhập hệ thống quản lý lịch hẹn & khách hàng</p>
+      </div>
+
+      <!-- Form Đăng Nhập -->
+      <form onsubmit="event.preventDefault(); AuthModule.login(document.getElementById('login-username').value, document.getElementById('login-password').value);" class="space-y-4 relative">
+        <div class="space-y-1">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tên Đăng Nhập / Tài Khoản</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+            <input 
+              type="text" 
+              id="login-username" 
+              required 
+              value=""
+              placeholder="Nhập tên đăng nhập (admin, letan...)" 
+              class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-sm font-medium"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Mật Khẩu</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+            <input 
+              type="password" 
+              id="login-password" 
+              required 
+              value=""
+              placeholder="Nhập mật khẩu..." 
+              class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-sm font-medium"
+            />
+            <button 
+              type="button" 
+              onclick="const p = document.getElementById('login-password'); p.type = p.type === 'password' ? 'text' : 'password';" 
+              class="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+            >
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="w-full py-3 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-xl font-bold shadow-md shadow-rose-500/20 transition transform active:scale-[0.99] flex items-center justify-center space-x-2"
+        >
+          <span>Đăng Nhập</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+
+      <!-- Quick Login For Demo -->
+      <div class="pt-2 border-t border-slate-100 text-center space-y-2">
+        <p class="text-[11px] text-slate-400 uppercase font-semibold">Tài khoản có sẵn mẫu</p>
+        <div class="grid grid-cols-3 gap-2 text-xs">
+          <button 
+            type="button" 
+            onclick="document.getElementById('login-username').value='admin'; document.getElementById('login-password').value='123'; AuthModule.login('admin', '123');" 
+            class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold transition text-center"
+          >
+            👑 Admin
+          </button>
+          <button 
+            type="button" 
+            onclick="document.getElementById('login-username').value='letan'; document.getElementById('login-password').value='123'; AuthModule.login('letan', '123');" 
+            class="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold transition text-center"
+          >
+            🌸 Lễ Tân
+          </button>
+          <button 
+            type="button" 
+            onclick="document.getElementById('login-username').value='ktv'; document.getElementById('login-password').value='123'; AuthModule.login('ktv', '123');" 
+            class="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold transition text-center"
+          >
+            💆‍♀️ KTV
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Overlay -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 hidden lg:hidden"></div>
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-rose-100 flex flex-col justify-between transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:static">
+    <div>
+      <!-- Brand Logo -->
+      <div class="p-6 border-b border-rose-100/80 flex items-center space-x-3 cursor-pointer group" onclick="app.openLogoUploadModal()" title="Bấm vào đây để thay đổi Logo Spa">
+        <div id="sidebar-spa-logo-wrapper" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-rose-400 text-white flex items-center justify-center shadow-md shadow-rose-500/20 group-hover:scale-105 group-hover:ring-2 ring-rose-400 transition-all overflow-hidden flex-shrink-0">
+          <i data-lucide="sparkles" class="w-6 h-6"></i>
+        </div>
+        <div class="overflow-hidden">
+          <h1 id="sidebar-spa-name" class="font-bold text-base text-slate-800 tracking-tight leading-tight truncate">Glow & Relax</h1>
+          <p class="text-[11px] font-semibold text-rose-500 tracking-widest uppercase flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Spa Manager
+          </p>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-4 space-y-1.5 text-sm font-medium">
+        <button 
+          onclick="app.switchTab('dashboard')"
+          data-tab="dashboard"
+          class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition bg-rose-500 text-white shadow-md shadow-rose-500/20"
+        >
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+          <span>Tổng Quan (Dashboard)</span>
+        </button>
+
+        <button 
+          onclick="app.switchTab('appointments')"
+          data-tab="appointments"
+          class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+        >
+          <i data-lucide="calendar" class="w-5 h-5"></i>
+          <span>Lịch Hẹn Spa</span>
+        </button>
+
+        <button 
+          onclick="app.switchTab('customers')"
+          data-tab="customers"
+          class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+        >
+          <i data-lucide="users" class="w-5 h-5"></i>
+          <span>Khách Hàng (CRM)</span>
+        </button>
+
+        <button 
+          onclick="app.switchTab('services')"
+          data-tab="services"
+          class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+        >
+          <i data-lucide="flower-2" class="w-5 h-5"></i>
+          <span>Dịch Vụ & Nhân Viên</span>
+        </button>
+
+        <button 
+          onclick="app.switchTab('reports')"
+          data-tab="reports"
+          class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+        >
+          <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+          <span>Báo Cáo Doanh Thu</span>
+        </button>
+
+        <button 
+          onclick="app.switchTab('settings')"
+          data-tab="settings"
+          class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+        >
+          <i data-lucide="settings" class="w-5 h-5"></i>
+          <span>Cài Đặt & Sao Lưu</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Quick Action / Bottom Profile -->
+    <div class="p-4 border-t border-rose-100">
+      <div class="bg-rose-50/80 p-3 rounded-2xl flex items-center justify-between">
+        <div 
+          onclick="app.switchTab('settings')" 
+          class="flex items-center space-x-2.5 min-w-0 cursor-pointer hover:opacity-80 transition"
+          title="Bấm để vào Cài Đặt & Đổi Mật Khẩu"
+        >
+          <div class="auth-user-avatar w-9 h-9 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+            🌸
+          </div>
+          <div class="min-w-0">
+            <div class="auth-user-name font-bold text-xs text-slate-800 truncate">Lễ Tân Spa</div>
+            <div class="auth-user-role text-[10px] text-emerald-600 font-semibold truncate flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Đang trực ca
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <button 
+            onclick="AuthModule.openEditUserModal(AuthModule.getCurrentUser()?.id)" 
+            title="Đổi Tên Đăng Nhập & Mật Khẩu"
+            class="p-1.5 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition"
+          >
+            <i data-lucide="key" class="w-3.5 h-3.5"></i>
+          </button>
+          <button 
+            onclick="AuthModule.logout()" 
+            title="Đăng xuất"
+            class="p-1.5 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition"
+          >
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <!-- Top Header -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-rose-100 px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button id="mobile-sidebar-toggle" class="p-2 rounded-xl text-slate-600 hover:bg-rose-50 lg:hidden">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <div>
+          <h2 id="page-header-title" class="font-bold text-lg text-slate-800 leading-tight">Tổng Quan & Thống Kê</h2>
+          <p id="page-header-desc" class="text-xs text-slate-400 hidden sm:block">Theo dõi hiệu suất và lịch hẹn spa trong ngày</p>
+        </div>
+      </div>
+
+      <!-- Live Clock, Cloud Status & Quick Action Buttons -->
+      <div class="flex items-center space-x-2.5">
+        <!-- Cloud Connection Status Badge -->
+        <div id="header-cloud-status" class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500 cursor-pointer" onclick="app.switchTab('settings')" title="Bấm để xem trạng thái đồng bộ Google Cloud Firestore">
+          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span class="text-[11px] font-bold">Cloud</span>
+        </div>
+
+        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-rose-500"></i>
+          <span id="header-live-clock">--:--:--</span>
+        </div>
+
+        <button 
+          onclick="PackagesModule.openSellModal()"
+          class="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-semibold text-xs shadow-md shadow-purple-500/20 transition flex items-center space-x-1.5"
+          title="Bán gói dịch vụ dài hạn / Thẻ trả trước (Ghi nhận doanh thu ngay)"
+        >
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Bán Gói / Thẻ</span>
+        </button>
+
+        <button 
+          onclick="AppointmentsModule.openAddModal()"
+          class="px-4 py-2 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-xl font-semibold text-xs shadow-md shadow-rose-500/20 transition flex items-center space-x-2"
+        >
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Đặt Lịch Ngay</span>
+        </button>
+
+        <button 
+          onclick="AuthModule.logout()"
+          title="Đăng xuất khỏi hệ thống"
+          class="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 border border-slate-200 transition flex items-center gap-1 text-xs font-semibold"
+        >
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Đăng Xuất</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      
+      <!-- 1. VIEW DASHBOARD -->
+      <section id="view-dashboard" class="view-section">
+        <div id="dashboard-view-content"></div>
+      </section>
+
+      <!-- 2. VIEW APPOINTMENTS -->
+      <section id="view-appointments" class="view-section hidden space-y-4">
+        <!-- Date Selector & View Switcher Bar -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-rose-100 flex flex-wrap items-center justify-between gap-4">
+          <!-- Điều hướng ngày -->
+          <div class="flex items-center space-x-2">
+            <button onclick="AppointmentsModule.prevDate()" class="p-2 hover:bg-rose-50 rounded-xl text-slate-600 transition" title="Ngày trước">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <button onclick="AppointmentsModule.today()" class="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl text-xs font-bold transition">
+              Hôm nay
+            </button>
+            <button onclick="AppointmentsModule.nextDate()" class="p-2 hover:bg-rose-50 rounded-xl text-slate-600 transition" title="Ngày sau">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Date Picker & Live Display -->
+            <div class="flex items-center space-x-2 ml-2">
+              <input 
+                type="date" 
+                id="apt-date-picker" 
+                onchange="AppointmentsModule.changeDate(this.value)"
+                class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+              />
+              <span id="apt-date-display" class="text-xs font-bold text-slate-700 hidden md:inline"></span>
+            </div>
+          </div>
+
+          <!-- Chế độ xem: Timeline / Tuần / Bảng danh sách -->
+          <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs">
+            <button 
+              onclick="AppointmentsModule.setView('timeline')"
+              data-view="timeline"
+              class="view-btn px-3 py-1.5 rounded-lg transition bg-white shadow-xs text-rose-600 font-semibold flex items-center gap-1.5"
+            >
+              <i data-lucide="columns" class="w-3.5 h-3.5"></i> Sơ đồ KTV
+            </button>
+            <button 
+              onclick="AppointmentsModule.setView('week')"
+              data-view="week"
+              class="view-btn px-3 py-1.5 rounded-lg transition text-slate-600 flex items-center gap-1.5"
+            >
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Lịch Tuần
+            </button>
+            <button 
+              onclick="AppointmentsModule.setView('list')"
+              data-view="list"
+              class="view-btn px-3 py-1.5 rounded-lg transition text-slate-600 flex items-center gap-1.5"
+            >
+              <i data-lucide="list" class="w-3.5 h-3.5"></i> Danh Sách
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Appointments Content -->
+        <div id="appointments-view-content"></div>
+      </section>
+
+      <!-- 3. VIEW CUSTOMERS CRM -->
+      <section id="view-customers" class="view-section hidden">
+        <div id="customers-view-content"></div>
+      </section>
+
+      <!-- 4. VIEW SERVICES & STAFF -->
+      <section id="view-services" class="view-section hidden">
+        <div id="services-view-content"></div>
+      </section>
+
+      <!-- 5. VIEW REPORTS (Báo cáo dịch vụ hoàn thành & doanh thu) -->
+      <section id="view-reports" class="view-section hidden">
+        <div id="reports-view-content"></div>
+      </section>
+
+      <!-- 6. VIEW SETTINGS & BACKUP -->
+      <section id="view-settings" class="view-section hidden">
+        <div id="settings-view-content"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal Đặt / Sửa Lịch Hẹn -->
+  <div id="appointment-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-rose-100 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
+        <h3 id="modal-apt-title" class="font-bold text-slate-800 text-base">Đặt Lịch Hẹn Mới</h3>
+        <button onclick="AppointmentsModule.closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-rose-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="appointment-form" onsubmit="AppointmentsModule.saveAppointmentForm(event)" class="p-6 space-y-4 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="AppointmentsModule.closeModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100 transition">
+          Huỷ Bỏ
+        </button>
+        <button type="submit" form="appointment-form" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-xl shadow-xs transition">
+          Lưu Lịch Hẹn
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chi Tiết Lịch Hẹn & Đổi Trạng Thái Nhanh -->
+  <div id="appointment-detail-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-rose-100 overflow-hidden max-h-[90vh] p-6">
+      <div id="appointment-detail-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm / Sửa Khách Hàng -->
+  <div id="customer-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-rose-100 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
+        <h3 id="modal-customer-title" class="font-bold text-slate-800 text-base">Thêm Khách Hàng Mới</h3>
+        <button onclick="CustomersModule.closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="customer-form" onsubmit="CustomersModule.saveCustomerForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="CustomersModule.closeModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="customer-form" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-xl shadow-xs">
+          Lưu Khách Hàng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Hồ Sơ & Lịch Sử Trị Liệu Khách Hàng -->
+  <div id="customer-history-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-rose-100 overflow-hidden max-h-[90vh] p-6 overflow-y-auto">
+      <div class="flex justify-end pb-2">
+        <button onclick="CustomersModule.closeHistoryModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-rose-50">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="customer-history-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm / Sửa Dịch Vụ -->
+  <div id="service-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-md rounded-2xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
+        <h3 id="modal-service-title" class="font-bold text-slate-800 text-base">Thêm Dịch Vụ Mới</h3>
+        <button onclick="ServicesModule.closeServiceModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="service-form" onsubmit="ServicesModule.saveServiceForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="ServicesModule.closeServiceModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="service-form" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-xl shadow-xs">
+          Lưu Dịch Vụ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm Kỹ Thuật Viên -->
+  <div id="staff-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-md rounded-2xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
+        <h3 id="modal-staff-title" class="font-bold text-slate-800 text-base">Thêm Kỹ Thuật Viên</h3>
+        <button onclick="ServicesModule.closeStaffModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="staff-form" onsubmit="ServicesModule.saveStaffForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="ServicesModule.closeStaffModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="staff-form" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-xl shadow-xs">
+          Lưu KTV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm / Sửa Phòng & Giường -->
+  <div id="room-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-md rounded-2xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
+        <h3 id="modal-room-title" class="font-bold text-slate-800 text-base">Thêm Phòng & Giường Spa</h3>
+        <button onclick="ServicesModule.closeRoomModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="room-form" onsubmit="ServicesModule.saveRoomForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="ServicesModule.closeRoomModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="room-form" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-xl shadow-xs">
+          Lưu Phòng & Giường
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm / Sửa Tài Khoản Đăng Nhập & Mật Khẩu -->
+  <div id="user-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-md rounded-2xl shadow-2xl border border-rose-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
+        <h3 id="modal-user-title" class="font-bold text-slate-800 text-base">Thay Đổi Tài Khoản & Mật Khẩu</h3>
+        <button onclick="AuthModule.closeUserModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="user-modal-form" onsubmit="AuthModule.saveUserModalForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="AuthModule.closeUserModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="user-modal-form" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-xl shadow-xs">
+          Lưu Thay Đổi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Bán Gói Dịch Vụ & Thẻ Dài Hạn -->
+  <div id="package-sell-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-purple-100 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-purple-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-white">
+        <div class="flex items-center gap-2">
+          <span class="p-1.5 bg-purple-100 text-purple-700 rounded-lg"><i data-lucide="sparkles" class="w-4 h-4"></i></span>
+          <h3 class="font-bold text-slate-800 text-base">Bán Gói Dịch Vụ / Nạp Thẻ Liệu Trình</h3>
+        </div>
+        <button onclick="PackagesModule.closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="package-form" onsubmit="PackagesModule.savePackageOrderForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="PackagesModule.closeModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="package-form" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs">
+          Xác Nhận Bán Gói & Thu Tiền
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Trừ Tiền Thẻ Trả Trước -->
+  <div id="deduct-balance-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-md rounded-2xl shadow-2xl border border-purple-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-purple-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-white">
+        <div class="flex items-center gap-2">
+          <span class="p-1.5 bg-purple-100 text-purple-700 rounded-lg"><i data-lucide="minus-circle" class="w-4 h-4"></i></span>
+          <h3 class="font-bold text-slate-800 text-base">Thanh Toán & Trừ Tiền Thẻ</h3>
+        </div>
+        <button onclick="PackagesModule.closeDeductBalanceModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="deduct-balance-form" onsubmit="PackagesModule.saveDeductBalance(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="PackagesModule.closeDeductBalanceModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="deduct-balance-form" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs">
+          Xác Nhận Trừ Tiền
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm / Chỉnh Sửa Gói Dịch Vụ Mẫu -->
+  <div id="package-template-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-purple-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-purple-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-white">
+        <div class="flex items-center gap-2">
+          <span class="p-1.5 bg-purple-100 text-purple-700 rounded-lg"><i data-lucide="sparkles" class="w-4 h-4"></i></span>
+          <h3 id="modal-pkg-template-title" class="font-bold text-slate-800 text-base">Thêm Gói / Thẻ Dịch Vụ Mới</h3>
+        </div>
+        <button onclick="PackagesModule.closeTemplateModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="package-template-form" onsubmit="PackagesModule.saveTemplateForm(event)" class="p-6 overflow-y-auto flex-1"></form>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-2">
+        <button type="button" onclick="PackagesModule.closeTemplateModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-100">
+          Huỷ
+        </button>
+        <button type="submit" form="package-template-form" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs">
+          Lưu Gói Dịch Vụ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL ĐỔI LOGO SPA ==================== -->
+  <div id="logo-upload-modal" class="modal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="modal-content bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-rose-100 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between border-b border-rose-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="p-2 bg-rose-100 text-rose-600 rounded-xl">
+            <i data-lucide="image" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Thay Đổi Logo Spa</h3>
+            <p class="text-xs text-slate-400">Hiển thị ở góc trái trên cùng, trang đăng nhập & hóa đơn</p>
+          </div>
+        </div>
+        <button onclick="app.closeLogoUploadModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Live Preview -->
+      <div class="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 flex items-center gap-4">
+        <div id="modal-logo-preview" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-500 to-rose-400 text-white flex items-center justify-center text-3xl shadow-md shadow-rose-500/20 overflow-hidden flex-shrink-0">
+          <i data-lucide="sparkles" class="w-8 h-8"></i>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-700 uppercase">Xem trước Logo hiện tại</div>
+          <p class="text-xs text-slate-500 mt-0.5">Logo sẽ tự động đồng bộ lên tất cả các máy và điện thoại qua Google Cloud.</p>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="space-y-4 text-xs">
+        <!-- Option 1: File Upload -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+          <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-4 h-4 text-rose-500"></i> Cách 1: Tải file ảnh Logo từ máy tính
+          </div>
+          <p class="text-slate-500">Chọn ảnh định dạng PNG (nền trong suốt), JPG, WebP hoặc SVG.</p>
+          <input type="file" id="logo-file-input" accept="image/*" class="hidden" onchange="app.handleLogoFileUpload(event)" />
+          <button 
+            type="button" 
+            onclick="document.getElementById('logo-file-input').click()"
+            class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold shadow-xs transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="folder-open" class="w-4 h-4"></i> Chọn Ảnh Logo Từ Máy...
+          </button>
+        </div>
+
+        <!-- Option 2: Choose Presets -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+          <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <i data-lucide="palette" class="w-4 h-4 text-purple-600"></i> Cách 2: Chọn nhanh biểu tượng Spa cao cấp
+          </div>
+          <div class="grid grid-cols-5 gap-2 pt-1">
+            <button type="button" onclick="app.setPresetLogo('✨')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Lấp lánh">✨</button>
+            <button type="button" onclick="app.setPresetLogo('🌸')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Hoa anh đào">🌸</button>
+            <button type="button" onclick="app.setPresetLogo('🌺')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Hoa dâm bụt">🌺</button>
+            <button type="button" onclick="app.setPresetLogo('💆‍♀️')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Kỹ thuật viên">💆‍♀️</button>
+            <button type="button" onclick="app.setPresetLogo('👑')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Vương miện VIP">👑</button>
+            <button type="button" onclick="app.setPresetLogo('🌿')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Thảo mộc">🌿</button>
+            <button type="button" onclick="app.setPresetLogo('💎')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Kim cương">💎</button>
+            <button type="button" onclick="app.setPresetLogo('🍃')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Lá sen xanh">🍃</button>
+            <button type="button" onclick="app.setPresetLogo('🧴')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-2xl flex items-center justify-center transition hover:scale-105" title="Tinh chất / Serum">🧴</button>
+            <button type="button" onclick="app.setPresetLogo('heart')" class="p-3 bg-white hover:bg-rose-50 rounded-xl border border-slate-200 text-xl flex items-center justify-center transition hover:scale-105 text-rose-500" title="Trái tim"><i data-lucide="heart" class="w-5 h-5"></i></button>
+          </div>
+        </div>
+
+        <!-- Option 3: Image URL -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+          <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <i data-lucide="link" class="w-4 h-4 text-blue-500"></i> Cách 3: Dán đường link ảnh trực tiếp (URL)
+          </div>
+          <div class="flex gap-2">
+            <input type="url" id="logo-url-input" placeholder="https://example.com/logo.png" class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs" />
+            <button type="button" onclick="app.setLogoFromUrl()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition">Lưu URL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+        <button type="button" onclick="app.resetLogo()" class="text-slate-400 hover:text-red-500 font-medium transition">
+          Đặt lại logo mặc định
+        </button>
+        <button type="button" onclick="app.closeLogoUploadModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- Google Firebase Cloud SDK (Hỗ trợ đồng bộ đa thiết bị Realtime) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="./js/firebase-sync.js"></script>
+
+  <!-- APP SCRIPTS -->
+  <script src="./js/store.js"></script>
+  <script src="./js/auth.js"></script>
+  <script src="./js/appointments.js"></script>
+  <script src="./js/customers.js"></script>
+  <script src="./js/services.js"></script>
+  <script src="./js/packages.js"></script>
+  <script src="./js/reports.js"></script>
+  <script src="./js/dashboard.js"></script>
+  <script src="./js/app.js"></script>
+  <script>
+    // Khởi tạo App & Firebase Cloud Sync
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.FirebaseSync) FirebaseSync.init();
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
