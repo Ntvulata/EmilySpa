@@ -54,8 +54,8 @@ const AuthModule = {
     try {
       const data = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEYS.USERS_LIST));
       if (Array.isArray(data) && data.length > 0) {
-        // Đảm bảo luôn có tài khoản admin
-        if (!data.some(u => u.username && u.username.toLowerCase() === 'admin')) {
+        // Đảm bảo luôn có ít nhất 1 tài khoản quản trị
+        if (!data.some(u => u.role === 'admin')) {
           data.unshift(DEFAULT_USERS[0]);
         }
         return data;
@@ -94,17 +94,23 @@ const AuthModule = {
     }
 
     let users = this.getUsers();
-    let user = users.find(u => u.username && u.username.toLowerCase() === username && String(u.password).trim() === password);
-
-    // Fallback: Nếu không tìm thấy, kiểm tra trong DEFAULT_USERS
-    if (!user) {
+    let user = null;
+    
+    // Tìm user theo username
+    let existingUser = users.find(u => u.username && u.username.toLowerCase() === username);
+    
+    if (existingUser) {
+      // User tồn tại, check pass
+      if (String(existingUser.password).trim() === password) {
+        user = existingUser;
+      }
+    } else {
+      // User không tồn tại, thử tìm trong DEFAULT_USERS
       const defaultMatch = DEFAULT_USERS.find(u => u.username.toLowerCase() === username && String(u.password).trim() === password);
       if (defaultMatch) {
         user = defaultMatch;
-        if (!users.some(u => u.username.toLowerCase() === username)) {
-          users.push(defaultMatch);
-          this.saveUsers(users);
-        }
+        users.push(defaultMatch);
+        this.saveUsers(users);
       }
     }
 
