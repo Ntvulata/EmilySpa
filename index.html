@@ -71,7 +71,7 @@
               id="login-username" 
               required 
               value=""
-              placeholder="Nhập tên đăng nhập (admin, letan...)" 
+              placeholder="Nhập tên đăng nhập..." 
               class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-sm font-medium"
             />
           </div>
@@ -108,33 +108,7 @@
         </button>
       </form>
 
-      <!-- Quick Login For Demo -->
-      <div class="pt-2 border-t border-slate-100 text-center space-y-2">
-        <p class="text-[11px] text-slate-400 uppercase font-semibold">Tài khoản có sẵn mẫu</p>
-        <div class="grid grid-cols-3 gap-2 text-xs">
-          <button 
-            type="button" 
-            onclick="document.getElementById('login-username').value='admin'; document.getElementById('login-password').value='123'; AuthModule.login('admin', '123');" 
-            class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold transition text-center"
-          >
-            👑 Admin
-          </button>
-          <button 
-            type="button" 
-            onclick="document.getElementById('login-username').value='letan'; document.getElementById('login-password').value='123'; AuthModule.login('letan', '123');" 
-            class="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold transition text-center"
-          >
-            🌸 Lễ Tân
-          </button>
-          <button 
-            type="button" 
-            onclick="document.getElementById('login-username').value='ktv'; document.getElementById('login-password').value='123'; AuthModule.login('ktv', '123');" 
-            class="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold transition text-center"
-          >
-            💆‍♀️ KTV
-          </button>
-        </div>
-      </div>
+
     </div>
   </div>
 
