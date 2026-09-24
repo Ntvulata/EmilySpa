@@ -67,8 +67,11 @@ const app = {
 
     const sidebarNameEl = document.getElementById('sidebar-spa-name');
     if (sidebarNameEl) sidebarNameEl.textContent = spaName;
+    
     const loginNameEl = document.getElementById('login-spa-name');
-    if (loginNameEl) loginNameEl.textContent = spaName + ' Spa';
+    if (loginNameEl) loginNameEl.textContent = spaName;
+    
+    document.title = `${spaName} - Quản Lý Lịch Hẹn & Khách Hàng`;
 
     if (window.lucide) lucide.createIcons();
   },
@@ -147,6 +150,20 @@ const app = {
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+  },
+  
+  changeTheme(colorName) {
+    const store = window.spaStore;
+    const settings = store.getSettings();
+    settings.themeColor = colorName;
+    store.saveSettings(settings);
+    
+    this.showToast(`Đã đổi màu giao diện thành ${colorName}! Đang tải lại trang...`, 'success');
+    
+    // Reload after a short delay so the toast can be seen
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
   },
 
   setPresetLogo(preset) {
@@ -420,6 +437,28 @@ const app = {
               </button>
             </div>
           </form>
+        </div>
+
+        <!-- Cài Đặt Giao Diện (Màu sắc) -->
+        <div class="bg-white p-6 rounded-2xl border border-rose-100 shadow-sm space-y-4">
+          <div class="flex items-center space-x-3 border-b border-rose-100 pb-3">
+            <span class="p-2 bg-rose-100 text-rose-600 rounded-lg">
+              <i data-lucide="palette" class="w-5 h-5"></i>
+            </span>
+            <div>
+              <h3 class="font-bold text-slate-800">Cài Đặt Giao Diện</h3>
+              <p class="text-xs text-slate-400">Thay đổi màu sắc chủ đạo của phần mềm (Tải lại trang sau khi chọn)</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-6 gap-3">
+            <button onclick="app.changeTheme('rose')" class="h-10 rounded-xl bg-rose-500 hover:scale-105 transition shadow-sm ring-offset-2 ${settings.themeColor === 'rose' || !settings.themeColor ? 'ring-2 ring-rose-500' : ''}" title="Màu Hồng Cánh Sen"></button>
+            <button onclick="app.changeTheme('blue')" class="h-10 rounded-xl bg-blue-500 hover:scale-105 transition shadow-sm ring-offset-2 ${settings.themeColor === 'blue' ? 'ring-2 ring-blue-500' : ''}" title="Màu Xanh Dương"></button>
+            <button onclick="app.changeTheme('teal')" class="h-10 rounded-xl bg-teal-500 hover:scale-105 transition shadow-sm ring-offset-2 ${settings.themeColor === 'teal' ? 'ring-2 ring-teal-500' : ''}" title="Màu Xanh Lục Bảo"></button>
+            <button onclick="app.changeTheme('emerald')" class="h-10 rounded-xl bg-emerald-500 hover:scale-105 transition shadow-sm ring-offset-2 ${settings.themeColor === 'emerald' ? 'ring-2 ring-emerald-500' : ''}" title="Màu Xanh Lá"></button>
+            <button onclick="app.changeTheme('amber')" class="h-10 rounded-xl bg-amber-500 hover:scale-105 transition shadow-sm ring-offset-2 ${settings.themeColor === 'amber' ? 'ring-2 ring-amber-500' : ''}" title="Màu Vàng Hổ Phách"></button>
+            <button onclick="app.changeTheme('purple')" class="h-10 rounded-xl bg-purple-500 hover:scale-105 transition shadow-sm ring-offset-2 ${settings.themeColor === 'purple' ? 'ring-2 ring-purple-500' : ''}" title="Màu Tím"></button>
+          </div>
         </div>
 
         <!-- Sao lưu & Phục hồi dữ liệu -->

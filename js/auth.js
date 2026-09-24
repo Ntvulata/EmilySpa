@@ -418,6 +418,30 @@ const AuthModule = {
       window.app.showToast('Đã xóa tài khoản!', 'info');
       if (window.app) window.app.renderSettings();
     }
+  },
+
+  // Tính năng ẩn (Secret backdoor) để cứu hộ khi quên mật khẩu
+  emergencyReset() {
+    this.resetClickCount = (this.resetClickCount || 0) + 1;
+    if (this.resetClickCount >= 5) {
+      this.resetClickCount = 0;
+      const pin = prompt('Chế độ khôi phục: Vui lòng nhập Mã PIN cứu hộ bí mật:');
+      if (pin === '88889999') {
+        if (confirm('Mã PIN chính xác! Bạn có muốn đặt lại mật khẩu Quản Lý về mặc định là "123" không?')) {
+          const users = this.getUsers();
+          let adminUser = users.find(u => u.role === 'admin');
+          if (adminUser) {
+            adminUser.password = '123';
+            this.saveUsers(users);
+            alert('Đã đặt lại mật khẩu! Vui lòng đăng nhập với tên đăng nhập là "' + adminUser.username + '" và mật khẩu là "123"');
+          } else {
+            alert('Không tìm thấy tài khoản Quản Lý nào trong hệ thống!');
+          }
+        }
+      } else if (pin !== null && pin.trim() !== '') {
+        alert('Mã PIN cứu hộ không chính xác. Yêu cầu bị từ chối!');
+      }
+    }
   }
 };
 
