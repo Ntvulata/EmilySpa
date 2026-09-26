@@ -53,7 +53,7 @@ function ServicesPage() {
   const [open, setOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const emptyService = { name: "", duration: "60", price: "" };
+  const emptyService = { id: "", name: "", duration: "60", price: "" };
   const [form, setForm] = useState(emptyService);
   const update = (key: keyof typeof form) => (e: { target: { value: string } }) => {
     let val = e.target.value;
@@ -66,7 +66,7 @@ function ServicesPage() {
 
   const editService = (i: number) => {
     const s = services[i]!;
-    setForm({ name: s.name, duration: s.duration.replace(/\D/g, ""), price: s.price ? Number(s.price).toLocaleString("en-US") : "" });
+    setForm({ id: s.id, name: s.name, duration: s.duration.replace(/\D/g, ""), price: s.price ? Number(s.price).toLocaleString("en-US") : "" });
     setEditIdx(i);
     setOpen(true);
     setError("");
@@ -78,7 +78,7 @@ function ServicesPage() {
       const s = services[i];
       setServices((l) => l.filter((_, idx) => idx !== i));
       serviceOptions.splice(i, 1);
-      fbDeleteService(s.name).catch(console.error);
+      fbDeleteService(s.id).catch(console.error);
       setNotice("Đã xóa dịch vụ thành công.");
     }
   };
@@ -91,14 +91,12 @@ function ServicesPage() {
     if (!name || !price || !minutes) return setError("Vui lòng nhập tên dịch vụ, thời lượng và giá.");
     if (services.some((s, i) => i !== editIdx && s.name.toLowerCase() === name.toLowerCase()))
       return setError("Dịch vụ này đã có trong danh mục.");
-    const item = { name, duration: `${minutes} phút`, price };
+    const item = { id: form.id || ("SRV_" + Date.now()), name, duration: `${minutes} phút`, price };
     if (editIdx !== null) {
       const oldName = services[editIdx].name;
       setServices((l) => l.map((s, i) => (i === editIdx ? item : s)));
       serviceOptions[editIdx] = item;
-      if (oldName !== name) {
-        fbDeleteService(oldName).catch(console.error);
-      }
+      
       setNotice(`Đã cập nhật dịch vụ ${name}.`);
     } else {
       setServices((l) => [...l, item]);
@@ -186,14 +184,14 @@ function ServicesPage() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [staffIdx, setStaffIdx] = useState<number | null>(null);
   const [staffError, setStaffError] = useState("");
-  const emptyStaff = { name: "", phone: "", role: roles[0]! };
+  const emptyStaff = { id: "", name: "", phone: "", role: roles[0]! };
   const [staffForm, setStaffForm] = useState(emptyStaff);
   const updateStaff = (key: keyof typeof staffForm) => (e: { target: { value: string } }) =>
     setStaffForm((f) => ({ ...f, [key]: e.target.value }));
 
   const editStaff = (i: number) => {
     const s = staff[i]!;
-    setStaffForm({ name: s.name, phone: s.phone, role: s.role });
+    setStaffForm({ id: s.id, name: s.name, phone: s.phone, role: s.role });
     setStaffIdx(i);
     setStaffOpen(true);
     setStaffError("");
@@ -205,7 +203,7 @@ function ServicesPage() {
       const t = staff[i];
       setStaff((l) => l.filter((_, idx) => idx !== i));
       therapists.splice(i, 1);
-      fbDeleteTherapist(t.name).catch(console.error);
+      fbDeleteTherapist(t.id).catch(console.error);
       setNotice("Đã xóa nhân viên thành công.");
     }
   };
@@ -216,14 +214,12 @@ function ServicesPage() {
     if (!name) return setStaffError("Vui lòng nhập tên nhân viên.");
     if (staff.some((s, i) => i !== staffIdx && s.name.toLowerCase() === name.toLowerCase()))
       return setStaffError("Nhân viên này đã có trong danh sách.");
-    const newStaff = { name, phone: staffForm.phone.trim(), role: staffForm.role, sessions: staffIdx !== null ? staff[staffIdx].sessions : 0 };
+    const newStaff = { id: staffForm.id || ("THR_" + Date.now()), name, phone: staffForm.phone.trim(), role: staffForm.role, sessions: staffIdx !== null ? staff[staffIdx].sessions : 0, revenue: staffIdx !== null ? staff[staffIdx].revenue : 0 };
     if (staffIdx !== null) {
       const oldName = staff[staffIdx].name;
       setStaff((l) => l.map((s, i) => (i === staffIdx ? newStaff : s)));
       therapists[staffIdx] = newStaff as any;
-      if (oldName !== name) {
-        fbDeleteTherapist(oldName).catch(console.error);
-      }
+      
       fbSaveTherapist(newStaff).catch(console.error);
       setNotice(`Đã cập nhật nhân viên ${name}.`);
     } else {

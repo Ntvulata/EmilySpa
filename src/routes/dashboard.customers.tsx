@@ -22,7 +22,7 @@ function CustomersPage() {
   const [open, setOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
 
-  const [form, setForm] = useState({ name: "", phone: "", tier: "Mới" });
+  const [form, setForm] = useState({ id: "", name: "", phone: "", tier: "Mới" });
   const [activePackages, setActivePackages] = useState<CustomerPackage[]>([]);
 
   const [error, setError] = useState("");
@@ -92,10 +92,10 @@ function CustomersPage() {
     }
   };
 
-  const getActivePackages = (customerName: string, legacyPackages: CustomerPackage[]) => {
+  const getActivePackages = (customerId: string, legacyPackages: CustomerPackage[]) => {
     const pkgIds = new Set(legacyPackages.map(p => p.packageId));
     packageHistory
-      .filter(h => h.customer.toLowerCase() === customerName.toLowerCase())
+      .filter(h => h.customerId === customerId)
       .forEach(h => pkgIds.add(h.packageId));
     
     const active: { packageId: string, remaining: number }[] = [];
@@ -159,7 +159,7 @@ function CustomersPage() {
             onClick={() => {
               if (open && editIdx === null) setOpen(false);
               else {
-                setForm({ name: "", phone: "", tier: "Mới" });
+                setForm({ id: "CUST_" + Date.now(), name: "", phone: "", tier: "Mới" });
                 setActivePackages([]);
                 setEditIdx(null);
                 setOpen(true);
@@ -211,7 +211,7 @@ function CustomersPage() {
                <p className="text-sm font-semibold text-ink">Gói/Thẻ đang sử dụng</p>
              </div>
              {(() => {
-                const formActivePackages = getActivePackages(form.name, activePackages);
+                const formActivePackages = getActivePackages(form.id || "", activePackages);
                 if (formActivePackages.length > 0) {
   const ITEMS_PER_PAGE = 50;
   const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
@@ -260,7 +260,7 @@ function CustomersPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {paginatedCustomers.map(({item, i}) => {
-          const validPackages = getActivePackages(item.name, item.activePackages);
+          const validPackages = getActivePackages(item.id, item.activePackages);
 
   const ITEMS_PER_PAGE = 50;
   const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
@@ -322,3 +322,4 @@ function CustomersPage() {
     </div>
   );
 }
+

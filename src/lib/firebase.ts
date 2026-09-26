@@ -78,12 +78,11 @@ export const fbDeleteAppointment = async (id: string) => {
 };
 
 export const fbSaveCustomer = async (cust: Customer) => {
-  // Using phone as document ID since it's unique
-  await setDoc(doc(db, "customers", cust.phone), cust);
+  await setDoc(doc(db, "customers", cust.id), cust);
 };
 
-export const fbDeleteCustomer = async (phone: string) => {
-  await deleteDoc(doc(db, "customers", phone));
+export const fbDeleteCustomer = async (id: string) => {
+  await deleteDoc(doc(db, "customers", id));
 };
 
 export const fbSavePackageHistory = async (record: PackageHistoryRecord) => {
@@ -135,16 +134,16 @@ export const fbSaveSettings = async (data: any) => {
 };
 
 export const fbSaveService = async (service: any) => {
-  await setDoc(doc(db, "services", service.name), service);
+  await setDoc(doc(db, "services", service.id), service);
 };
-export const fbDeleteService = async (name: string) => {
-  await deleteDoc(doc(db, "services", name));
+export const fbDeleteService = async (id: string) => {
+  await deleteDoc(doc(db, "services", id));
 };
 export const fbSaveTherapist = async (therapist: any) => {
-  await setDoc(doc(db, "therapists", therapist.name), therapist);
+  await setDoc(doc(db, "therapists", therapist.id), therapist);
 };
-export const fbDeleteTherapist = async (name: string) => {
-  await deleteDoc(doc(db, "therapists", name));
+export const fbDeleteTherapist = async (id: string) => {
+  await deleteDoc(doc(db, "therapists", id));
 };
 export const fbSaveMasterPackage = async (pkg: any) => {
   await setDoc(doc(db, "masterPackages", pkg.id), pkg);

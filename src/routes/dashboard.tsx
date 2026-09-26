@@ -1,4 +1,4 @@
-import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
+﻿import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -8,6 +8,7 @@ import {
   Settings,
   Sparkles,
   Users,
+  Phone,
   CreditCard,
   Loader2
 } from "lucide-react";
@@ -20,7 +21,8 @@ export const Route = createFileRoute("/dashboard")({
 const navItems = [
   { to: "/dashboard", label: "Tổng Quan", icon: LayoutDashboard, exact: true },
   { to: "/dashboard/appointments", label: "Lịch Hẹn Spa", icon: CalendarDays, exact: false },
-  { to: "/dashboard/customers", label: "Khách Hàng", icon: Users, exact: false },
+  { to: "/dashboard/customers", label: "Khách Hàng", icon: Users,
+  Phone, exact: false },
   { to: "/dashboard/services", label: "Dịch Vụ & Nhân Viên", icon: Sparkles, exact: false },
   { to: "/dashboard/packages-history", label: "Lịch Sử Gói/Thẻ", icon: CreditCard, exact: false },
   { to: "/dashboard/reports", label: "Báo Cáo Doanh Thu", icon: LineChart, exact: false },
@@ -144,7 +146,7 @@ function DashboardLayout() {
           {/* Footer */}
           <footer className="mt-auto border-t border-ink/5 bg-ivory/50 px-5 py-4 text-center sm:px-8">
             <p className="text-[11px] font-medium text-ink/40 uppercase tracking-[0.05em]">
-              &copy; 2026 Emily Spa &bull; Luxury Management &bull; Phát triển bởi <span className="font-bold text-ink/60">Nguyễn Tuấn Vũ</span> &bull; SĐT: 0943.867.865
+              &copy; 2026 Emily Spa &bull; Luxury Management &bull; Phát triển bởi <span className="font-bold text-ink/60">Nguyễn Tuấn Vũ</span> &bull; <Phone className="inline-block size-3.5 -mt-0.5 mr-0.5" /> 0943.867.865
             </p>
           </footer>
         </div>
@@ -152,3 +154,4 @@ function DashboardLayout() {
     </div>
   );
 }
+

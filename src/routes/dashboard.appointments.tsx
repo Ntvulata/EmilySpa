@@ -191,9 +191,9 @@ function AppointmentsPage() {
     date: string;
     time: string;
       endTime: string;
-    customer: string;
-    services: string[];
-    therapist: string;
+    customerId: string;
+    serviceIds: string[];
+    therapistId: string;
     status: AppointmentStatus;
     packageUsed: string;
     price: string;
@@ -203,9 +203,9 @@ function AppointmentsPage() {
     date: new Date().toISOString().split("T")[0],
     time: getNext15MinTime(),
       endTime: getNext15MinTime(60),
-    customer: "",
-    services: serviceOptions.length > 0 ? [serviceOptions[0].name] : [""],
-    therapist: masterTherapists[0].name,
+    customerId: "",
+    serviceIds: serviceOptions.length > 0 ? [serviceOptions[0].id] : [""],
+    therapistId: masterTherapists[0].id,
     status: "cho",
     packageUsed: "",
     price: "",
@@ -246,29 +246,29 @@ function AppointmentsPage() {
   const therapists = useMemo(() => {
     return therapistNames.map(name => ({
       name,
-      sessions: rows.filter(r => r.therapist === name).length
+      sessions: rows.filter(r => r.therapistId === name || r.therapist === name).length
     }));
   }, [rows]);
 
-  const customerOptions = initialCustomers.map(c => ({ value: c.name, label: `${c.name} - ${c.phone}` }));
+  const customerOptions = initialCustomers.map(c => ({ value: c.id, label: `${c.name} - ${c.phone}` }));
 
   // Khách hàng hiện tại đang chọn để xem họ có thẻ gì
   const customerPackages = useMemo(() => {
-    if (!form.customer) return [];
+    if (!form.customerId) return [];
     
     // Thu thập tất cả các gói từ history
     const pkgIds = new Set<string>();
     packageHistory
-      .filter(h => h.customer === form.customer)
+      .filter(h => h.customer === form.customerId)
       .forEach(h => pkgIds.add(h.packageId));
     
     // Fallback lấy từ initialCustomers nếu cần (nếu chưa có trong history)
-    const c = initialCustomers.find(x => x.name === form.customer);
+    const c = initialCustomers.find(x => x.id === form.customerId);
     if (c) c.activePackages.forEach(p => pkgIds.add(p.id));
 
     const active: { id: string, name: string, type: 'sessions' | 'balance', remaining: number }[] = [];
     pkgIds.forEach(id => {
-      const rem = getRemainingPackageValue(form.customer, id);
+      const rem = getRemainingPackageValue(form.customerId, id);
       if (rem > 0) {
         const master = masterPackages.find(m => m.id === id);
         if (master) {
@@ -277,7 +277,7 @@ function AppointmentsPage() {
       }
     });
     return active;
-  }, [form.customer, appts]); // thêm appts vào dependency để update lại khi có thay đổi trừ thẻ
+  }, [form.customerId, appts]); // thêm appts vào dependency để update lại khi có thay đổi trừ thẻ
 
   const shiftDate = (days: number) => {
     const d = new Date(toDate);
@@ -292,9 +292,9 @@ function AppointmentsPage() {
       date: new Date().toISOString().split("T")[0],
       time: getNext15MinTime(),
       endTime: getNext15MinTime(60),
-      customer: "",
-      services: serviceOptions.length > 0 ? [serviceOptions[0].name] : [""],
-      therapist: masterTherapists[0].name,
+      customerId: "",
+      serviceIds: serviceOptions.length > 0 ? [serviceOptions[0].id] : [""],
+      therapistId: masterTherapists[0].id,
       status: "cho",
       packageUsed: "",
       price: "",
@@ -312,9 +312,9 @@ function AppointmentsPage() {
       date: item.date,
       time: item.time,
         endTime: item.endTime || item.time,
-      customer: item.customer,
-      services: [...item.services],
-      therapist: item.therapist,
+      customerId: item.customerId,
+      serviceIds: [...(item.serviceIds || (item as any).services || [])],
+      therapistId: item.therapistId,
       status: item.status,
       packageUsed: item.packageUsed || "",
       price: item.price ? Number(item.price).toLocaleString("en-US") : "",
@@ -419,19 +419,19 @@ function AppointmentsPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.customer) return setError("Vui lòng chọn khách hàng.");
+    if (!form.customerId) return setError("Vui lòng chọn khách hàng.");
     if (!form.endTime || form.endTime <= form.time) return setError("Giờ kết thúc phải sau giờ bắt đầu.");
     
     // Check overlap
     const hasOverlap = appts.some(app => {
-      if (app.id === editId || app.status === 'huy' || app.date !== form.date || app.therapist !== form.therapist) return false;
+      if (app.id === editId || app.status === 'huy' || app.date !== form.date || app.therapistId !== form.therapistId) return false;
       const appEndTime = app.endTime || app.time; // fallback
       return form.time < appEndTime && form.endTime > app.time;
     });
     
     if (hasOverlap) return setError("KTV này đã có lịch hẹn khác trong khoảng thời gian này! Vui lòng chọn giờ hoặc KTV khác.");
 
-      if (form.services.length === 0) return setError("Vui lòng chọn ít nhất 1 dịch vụ.");
+      if (form.serviceIds.length === 0) return setError("Vui lòng chọn ít nhất 1 dịch vụ.");
     
     const p = form.price ? Number(form.price.replace(/\D/g, "")) : 0;
     const s = form.sessionsDeducted ? Number(form.sessionsDeducted.replace(/\D/g, "")) : 0;
@@ -440,7 +440,7 @@ function AppointmentsPage() {
     const t = getPackageType(form.packageUsed);
 
     if (form.packageUsed) {
-      const rem = getRemainingPackageValue(form.customer, form.packageUsed);
+      const rem = getRemainingPackageValue(form.customerId, form.packageUsed);
       if (t === "sessions" && form.status === "xong" && !editId) {
         if (s > rem) return setError(`Thẻ này chỉ còn ${rem} buổi, không đủ để trừ ${s} buổi.`);
       }
@@ -503,9 +503,9 @@ function AppointmentsPage() {
         date: form.date,
         time: form.time,
           endTime: form.endTime,
-        customer: form.customer,
-        services: [...form.services],
-        therapist: form.therapist,
+        customerId: form.customerId,
+        services: [...form.serviceIds],
+        therapistId: form.therapistId,
         status: form.status,
         packageUsed: form.packageUsed,
         price: p,
@@ -586,8 +586,8 @@ function AppointmentsPage() {
               <label className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Khách Hàng</label>
               <SearchableSelect
                 options={customerOptions}
-                value={form.customer}
-                onChange={(v) => { setForm({ ...form, customer: v, packageUsed: "" }); setError(""); }}
+                value={form.customerId}
+                onChange={(v) => { setForm({ ...form, customerId: v, packageUsed: "" }); setError(""); }}
                 placeholder="-- Chọn khách hàng --"
               />
             </div>
@@ -615,26 +615,26 @@ function AppointmentsPage() {
             <div className="space-y-1.5 sm:col-span-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Dịch vụ</span>
               <div className="space-y-2">
-                {form.services.map((svc, i) => (
+                {(form.serviceIds || []).map((svc, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
                         <SearchableSelect
-                          options={serviceOptions.map(s => ({ value: s.name, label: s.name }))}
+                          options={serviceOptions.map(s => ({ value: s.id, label: s.name }))}
                           value={svc}
                           onChange={v => {
-                            const newS = [...form.services];
+                            const newS = [...form.serviceIds];
                             newS[i] = v;
-                            setForm({...form, services: newS});
+                            setForm({...form, serviceIds: newS});
                           }}
                           placeholder="-- Chọn dịch vụ --"
                         />
                       </div>
-                      {form.services.length > 1 && (
+                      {form.serviceIds.length > 1 && (
                         <button 
                           type="button" 
                           onClick={() => {
-                            const newS = form.services.filter((_, idx) => idx !== i);
-                            setForm({...form, services: newS});
+                            const newS = form.serviceIds.filter((_, idx) => idx !== i);
+                            setForm({...form, serviceIds: newS});
                           }}
                           className="text-ink/40 hover:text-red-500 p-1.5 transition"
                           title="Xóa"
@@ -647,7 +647,7 @@ function AppointmentsPage() {
                 </div>
                 <button 
                   type="button" 
-                  onClick={() => setForm({...form, services: [...form.services, ""]})}
+                  onClick={() => setForm({...form, serviceIds: [...form.serviceIds, ""]})}
                   className="mt-2 inline-flex items-center gap-1.5 rounded-[3px] border border-emerald/30 bg-emerald/10 px-3 py-1.5 text-[11px] font-semibold text-emerald transition hover:bg-emerald/20"
                 >
                   <Plus className="size-3" /> Thêm dịch vụ
@@ -655,8 +655,8 @@ function AppointmentsPage() {
               </div>
             <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
               Kỹ thuật viên
-              <select className={inputClass} value={form.therapist} onChange={e => setForm({...form, therapist: e.target.value})}>
-                {therapistNames.map(t => <option key={t} value={t}>{t}</option>)}
+              <select className={inputClass} value={form.therapistId} onChange={e => setForm({...form, therapistId: e.target.value})}>
+                {masterTherapists.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </label>
             <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
@@ -792,17 +792,16 @@ function AppointmentsPage() {
                 return (
                 <tr key={item.id} className="transition hover:bg-ivory/60">
                   <td className="px-4 py-3.5">
-                    <p className="font-semibold text-ink">{item.customer}</p>
+                    <p className="font-semibold text-ink">{initialCustomers.find(c => c.id === item.customerId)?.name || "Unknown"}</p>
                     <p className="text-[11px] text-ink/50">{item.time} - {item.date}</p>
                   </td>
                   <td className="px-4 py-3.5 text-ink/75">
                     <div className="flex flex-wrap gap-1">
-                      {item.services.map((s, idx) => (
-                        <span key={idx} className="inline-block px-1.5 py-0.5 rounded-[2px] bg-ink/5 text-[11px] text-ink/80">{s}</span>
-                      ))}
+                      {(item.serviceIds || (item as any).services || []).map((sid, idx) => { const s = serviceOptions.find(opt => opt.id === sid)?.name || sid; return (
+                        <span key={idx} className="inline-block px-1.5 py-0.5 rounded-[2px] bg-ink/5 text-[11px] text-ink/80">{s}</span> ); })}
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-ink/75">{item.therapist}</td>
+                  <td className="px-4 py-3.5 text-ink/75">{masterTherapists.find(t => t.id === item.therapistId)?.name || "Unknown"}</td>
                   <td className="px-4 py-3.5 text-xs font-medium text-emerald">{getPackageName(item.packageUsed)}</td>
                   <td className="px-4 py-3.5 text-right font-semibold">
                     {type === "none" && <span className="text-ink">{formatVnd(item.price || 0)}</span>}
@@ -913,7 +912,7 @@ function AppointmentsPage() {
                   
                   {/* Cards */}
                   {therapists.map((therapist, colIdx) => (
-                    rows.filter(r => r.therapist === therapist.name).map(appointment => {
+                    rows.filter(r => r.therapistId === therapist.id || r.therapist === therapist.name).map(appointment => {
                       const startMins = appointment.time.split(':').reduce((h, m) => h * 60 + Number(m), 0) - 8 * 60;
                       const endMins = appointment.endTime ? appointment.endTime.split(':').reduce((h, m) => h * 60 + Number(m), 0) - 8 * 60 : startMins + 60;
                       const startRow = Math.max(0, Math.floor(startMins / 15)) + 1;
@@ -923,7 +922,7 @@ function AppointmentsPage() {
                         <article key={appointment.id} className={`rounded-[3px] border p-2.5 flex flex-col justify-between ${isCapturing ? '!min-h-max overflow-visible z-50' : 'overflow-hidden hover:!min-h-max hover:z-[60] hover:shadow-xl'} transition-all cursor-default ${statusClass[appointment.status]}`} style={{ gridColumn: colIdx + 2, gridRowStart: startRow, gridRowEnd: endRow, margin: '4px', zIndex: 20, ...getGridCardStyle(appointment) }}>
                           <div>
                             <div className="flex items-start justify-between gap-1">
-                              <p className="text-sm font-semibold" style={{ color: getGridCardStyle(appointment).color || undefined }}>{appointment.customer}</p>
+                              <p className="text-sm font-semibold" style={{ color: getGridCardStyle(appointment).color || undefined }}>{initialCustomers.find(c => c.id === appointment.customerId)?.name || "Unknown"}</p>
                               <div className="flex items-center gap-1 shrink-0">
                                 <select
                                   value={appointment.status}
@@ -941,9 +940,8 @@ function AppointmentsPage() {
                             </div>
                             <p className="mt-0.5 text-[10px] font-bold" style={{ color: getGridCardStyle(appointment).color || undefined }}>{appointment.time} - {appointment.endTime || appointment.time}</p>
                             <div className="mt-1 flex flex-wrap gap-1">
-                              {appointment.services.map((s: string, idx: number) => (
-                                <span key={idx} className="inline-block px-1.5 py-0.5 rounded-[2px] bg-ink/5 text-[9px] text-ink/80" style={{ color: getGridCardStyle(appointment).color || undefined, backgroundColor: getGridCardStyle(appointment).color === "#FFFFFF" ? "rgba(255,255,255,0.2)" : undefined }}>{s}</span>
-                              ))}
+                              {(appointment.serviceIds || (appointment as any).services || []).map((sid: string, idx: number) => { const s = serviceOptions.find(opt => opt.id === sid)?.name || sid; return (
+                                <span key={idx} className="inline-block px-1.5 py-0.5 rounded-[2px] bg-ink/5 text-[9px] text-ink/80" style={{ color: getGridCardStyle(appointment).color || undefined, backgroundColor: getGridCardStyle(appointment).color === "#FFFFFF" ? "rgba(255,255,255,0.2)" : undefined }}>{s}</span> ); })}
                             </div>
                             <div className="mt-1.5 flex flex-col gap-1 items-start">
                               {appointment.packageUsed && (
@@ -972,4 +970,11 @@ function AppointmentsPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
 

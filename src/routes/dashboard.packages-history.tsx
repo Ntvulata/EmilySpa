@@ -164,7 +164,7 @@ function PackagesHistoryPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.date) return setError("Vui lòng chọn ngày mua.");
-    if (!form.customer) return setError("Vui lòng chọn khách hàng.");
+    if (!form.customerId) return setError("Vui lòng chọn khách hàng.");
     if (!form.packageId) return setError("Vui lòng chọn gói/thẻ.");
     
     const val = Number(form.valueChange.replace(/\D/g, ""));
@@ -181,7 +181,7 @@ function PackagesHistoryPage() {
         recordToSave = {
           ...packageHistory[idx],
           date: form.date,
-          customer: form.customer,
+          customer: form.customerId,
           packageId: form.packageId,
           valueChange: val,
           pricePaid: price,
@@ -196,7 +196,7 @@ function PackagesHistoryPage() {
         id: nextId,
         date: form.date,
         type: "sell" as const,
-        customer: form.customer,
+        customer: form.customerId,
         packageId: form.packageId,
         valueChange: val,
         pricePaid: price,
@@ -260,7 +260,7 @@ function PackagesHistoryPage() {
               <label className="text-xs font-semibold text-ink/60">Khách Hàng</label>
               <SearchableSelect
                 options={customerOptions}
-                value={form.customer}
+                value={form.customerId}
                 onChange={(v) => { setForm({ ...form, customer: v }); setError(""); }}
                 placeholder="-- Chọn khách hàng --"
               />
@@ -361,7 +361,7 @@ function PackagesHistoryPage() {
               <tr key={item.id} className="transition hover:bg-ivory/60">
                 <td className="px-4 py-3.5 font-medium text-ink/70">{item.id}</td>
                 <td className="px-4 py-3.5 text-ink/60">{item.date}</td>
-                <td className="px-4 py-3.5 font-semibold text-ink">{item.customer}</td>
+                <td className="px-4 py-3.5 font-semibold text-ink">{initialCustomers.find(c => c.id === item.customerId)?.name || "Unknown"}</td>
                 <td className="px-4 py-3.5">
                   {item.type === "sell" ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald bg-emerald/10 px-2 py-1 rounded-[2px]"><ShoppingCart className="size-3" /> BÁN THẺ</span>
@@ -396,3 +396,4 @@ function PackagesHistoryPage() {
     </div>
   );
 }
+

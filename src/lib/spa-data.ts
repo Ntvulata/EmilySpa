@@ -5,16 +5,16 @@ export type Appointment = {
   date: string;
   time: string;
   endTime?: string;
-  customer: string;
-  phone: string;
-  services: string[]; // Thay đổi từ service sang services (mảng)
-  therapist: string;
+  customerId: string;
+  phone?: string; // Optional now, since customerId is used
+  serviceIds: string[];
+  therapistId: string;
   packageUsed?: string; // Tên thẻ hoặc ID thẻ
   
   // Các trường thanh toán
-  price: number; // Tiền mặt thu (Áp dụng khi không dùng thẻ, hoặc khi thẻ trừ tiền không đủ)
-  sessionsDeducted?: number; // Số buổi sẽ trừ
-  balanceDeducted?: number; // Số tiền sẽ trừ vào thẻ
+  price: number;
+  sessionsDeducted?: number;
+  balanceDeducted?: number;
   
   status: AppointmentStatus;
 };
@@ -40,6 +40,7 @@ export type CustomerPackage = {
 };
 
 export type Customer = {
+  id: string;
   name: string;
   phone: string;
   visits: number;
@@ -48,11 +49,10 @@ export type Customer = {
 };
 
 export const initialCustomers: Customer[] = [
-  { name: "Nguyễn Thu Hà", phone: "0901 234 567", visits: 18, activePackages: [{ packageId: "PK1", remaining: 3 }], tier: "Kim cương" },
-  { name: "Trần Bảo Ngọc", phone: "0912 887 445", visits: 11, activePackages: [{ packageId: "PK2", remaining: 1450000 }], tier: "Vàng" },
-  { name: "Lê Minh Phụng", phone: "0938 442 110", visits: 7, activePackages: [{ packageId: "PK3", remaining: 1 }], tier: "Bạc" },
-  { name: "Phạm Khánh Vy", phone: "0977 310 226", visits: 4, activePackages: [], tier: "Mới" },
-  { name: "Đỗ Thanh Tâm", phone: "0908 665 231", visits: 22, activePackages: [{ packageId: "PK4", remaining: 5 }], tier: "Kim cương" },
+  { id: "CUST1", name: "Nguyễn Thu Hà", phone: "0901 234 567", visits: 18, activePackages: [{ packageId: "PK1", remaining: 3 }], tier: "Kim cương" },
+  { id: "CUST2", name: "Trần Bảo Ngọc", phone: "0912 887 445", visits: 11, activePackages: [{ packageId: "PK2", remaining: 1450000 }], tier: "Vàng" },
+  { id: "CUST3", name: "Lê Minh Tuấn", phone: "0933 666 888", visits: 2, activePackages: [], tier: "Mới" },
+  { id: "CUST4", name: "Phạm Phương Anh", phone: "0988 111 222", visits: 45, activePackages: [{ packageId: "PK1", remaining: 0 }, { packageId: "PK4", remaining: 8 }], tier: "Kim cương" }
 ];
 
 export const statusLabel: Record<AppointmentStatus, string> = {
@@ -85,14 +85,13 @@ export const therapists = [
   { name: "KTV Thanh Trúc", sessions: 3, revenue: 1240000 },
 ];
 
-export const serviceOptions = [
-  { name: "Massage đá nóng 90'", price: 750000 },
-  { name: "Chăm sóc da chuyên sâu", price: 980000 },
-  { name: "Gội đầu dưỡng sinh 60'", price: 450000 },
-  { name: "Triệt lông công nghệ cao", price: 1650000 },
-  { name: "Body detox thải độc", price: 1200000 },
-  { name: "Massage foot thư giãn", price: 390000 },
-  { name: "Trẻ hoá da ánh sáng sinh học", price: 2100000 },
+export type ServiceDef = { id: string; name: string; price: number; duration: string; };
+
+export const serviceOptions: ServiceDef[] = [
+  { id: "SRV1", name: "Chăm sóc da chuyên sâu", price: 800000, duration: "90 phút" },
+  { id: "SRV2", name: "Massage Body Tinh dầu", price: 650000, duration: "60 phút" },
+  { id: "SRV3", name: "Gội đầu dưỡng sinh", price: 250000, duration: "45 phút" },
+  { id: "SRV4", name: "Triệt lông vĩnh viễn (Nách)", price: 350000, duration: "30 phút" },
 ];
 
 export const serviceMix = [
@@ -117,14 +116,12 @@ export type PackageHistoryRecord = {
 };
 
 export const packageHistory: PackageHistoryRecord[] = [
-  { id: "HT-1", date: "2026-09-25", type: "sell", customer: "Nguyễn Thu Hà", packageId: "PK1", valueChange: 10, pricePaid: 8000000, note: "Mua mới" },
-  { id: "HT-2", date: "2026-09-25", type: "deduct", customer: "Nguyễn Thu Hà", packageId: "PK1", valueChange: -1, note: "Làm dịch vụ LH-2041", appointmentId: "LH-2041" },
-  { id: "HT-3", date: "2026-09-24", type: "sell", customer: "Trần Bảo Ngọc", packageId: "PK2", valueChange: 10000000, pricePaid: 8500000, note: "Nạp thêm" },
-  { id: "HT-4", date: "2026-09-24", type: "deduct", customer: "Đỗ Thanh Tâm", packageId: "PK4", valueChange: -1, note: "Làm dịch vụ LH-2045", appointmentId: "LH-2045" },
+  { id: "PH1", date: "2026-09-20", type: "sell", customerId: "CUST1", packageId: "PK1", valueChange: 10, pricePaid: 8000000, note: "Mua thẻ mới" },
+  { id: "PH2", date: "2026-09-21", type: "deduct", customerId: "CUST1", packageId: "PK1", valueChange: -1, note: "Trừ buổi 1" },
 ];
 
-export const getRemainingPackageValue = (customerName: string, packageId: string) => {
+export const getRemainingPackageValue = (customerId: string, packageId: string) => {
   return packageHistory
-    .filter(h => h.customer.toLowerCase() === customerName.toLowerCase() && h.packageId === packageId)
+    .filter(h => h.customerId === customerId && h.packageId === packageId)
     .reduce((sum, record) => sum + record.valueChange, 0);
 };
