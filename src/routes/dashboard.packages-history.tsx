@@ -86,7 +86,7 @@ function PackagesHistoryPage() {
   
   const [form, setForm] = useState({
     date: new Date().toISOString().split("T")[0],
-    customer: "",
+    customerId: "",
     packageId: "",
     valueChange: "",
     pricePaid: "",
@@ -110,13 +110,13 @@ function PackagesHistoryPage() {
   const totalPages = Math.ceil(filteredRows.length / ITEMS_PER_PAGE) || 1;
   const rows = filteredRows.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const customerOptions = initialCustomers.map(c => ({ value: c.name, label: `${c.name} - ${c.phone}` }));
+  const customerOptions = initialCustomers.map(c => ({ value: c.id, label: `${c.name} - ${c.phone}` }));
   const packageOptions = masterPackages.map(p => ({ value: p.id, label: `${p.name} (${p.type === "sessions" ? p.value + " buổi" : formatVnd(p.value)})` }));
 
   const startNew = () => {
     setForm({ 
       date: new Date().toISOString().split("T")[0], 
-      customer: "", 
+      customerId: "", 
       packageId: "", 
       valueChange: "", 
       pricePaid: "",
@@ -133,7 +133,7 @@ function PackagesHistoryPage() {
     if (!item || item.type !== "sell") return;
     setForm({
       date: item.date,
-      customer: item.customer,
+      customerId: item.customerId,
       packageId: item.packageId,
       valueChange: item.valueChange ? Number(item.valueChange).toLocaleString("en-US") : "",
       pricePaid: item.pricePaid !== undefined ? Number(item.pricePaid).toLocaleString("en-US") : "",
@@ -181,7 +181,7 @@ function PackagesHistoryPage() {
         recordToSave = {
           ...packageHistory[idx],
           date: form.date,
-          customer: form.customerId,
+          customerId: form.customerId,
           packageId: form.packageId,
           valueChange: val,
           pricePaid: price,
@@ -196,7 +196,7 @@ function PackagesHistoryPage() {
         id: nextId,
         date: form.date,
         type: "sell" as const,
-        customer: form.customerId,
+        customerId: form.customerId,
         packageId: form.packageId,
         valueChange: val,
         pricePaid: price,
@@ -261,7 +261,7 @@ function PackagesHistoryPage() {
               <SearchableSelect
                 options={customerOptions}
                 value={form.customerId}
-                onChange={(v) => { setForm({ ...form, customer: v }); setError(""); }}
+                onChange={(v) => { setForm({ ...form, customerId: v }); setError(""); }}
                 placeholder="-- Chọn khách hàng --"
               />
             </div>
