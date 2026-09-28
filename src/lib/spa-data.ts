@@ -85,13 +85,13 @@ export const therapists = [
   { name: "KTV Thanh Trúc", sessions: 3, revenue: 1240000 },
 ];
 
-export type ServiceDef = { id: string; name: string; price: number; duration: string; };
+export type ServiceDef = { id: string; name: string; price: number; duration: string; commission: number; };
 
 export const serviceOptions: ServiceDef[] = [
-  { id: "SRV1", name: "Chăm sóc da chuyên sâu", price: 800000, duration: "90 phút" },
-  { id: "SRV2", name: "Massage Body Tinh dầu", price: 650000, duration: "60 phút" },
-  { id: "SRV3", name: "Gội đầu dưỡng sinh", price: 250000, duration: "45 phút" },
-  { id: "SRV4", name: "Triệt lông vĩnh viễn (Nách)", price: 350000, duration: "30 phút" },
+  { id: "SRV1", name: "Chăm sóc da chuyên sâu", price: 800000, duration: "90 phút", commission: 50000 },
+  { id: "SRV2", name: "Massage Body Tinh dầu", price: 650000, duration: "60 phút", commission: 100000 },
+  { id: "SRV3", name: "Gội đầu dưỡng sinh", price: 250000, duration: "45 phút", commission: 30000 },
+  { id: "SRV4", name: "Triệt lông vĩnh viễn (Nách)", price: 350000, duration: "30 phút", commission: 20000 },
 ];
 
 export const serviceMix = [

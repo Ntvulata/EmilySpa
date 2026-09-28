@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { formatVnd, appointments, packageHistory, masterPackages } from "@/lib/spa-data";
+import { formatVnd, appointments, packageHistory, masterPackages, therapists as masterTherapists, serviceOptions, initialCustomers } from "@/lib/spa-data";
 import { Download } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/reports")({
@@ -21,7 +21,7 @@ function ReportsPage() {
   const [toDate, setToDate] = useState(today.toISOString().split("T")[0]);
 
   // Aggregate Data
-  const { dataByDay, totalApptRev, totalPkgRev, totalRevenue, serviceMix } = useMemo(() => {
+  const { dataByDay, totalApptRev, totalPkgRev, totalRevenue, serviceMix, staffStats } = useMemo(() => {
     const days = [];
     let d = new Date(fromDate);
     const end = new Date(toDate);
@@ -42,7 +42,7 @@ function ReportsPage() {
       
       // Tính toán tỷ trọng dịch vụ (dựa trên các lịch hẹn đã hoàn thành)
       dayAppts.forEach(a => {
-        a.services.forEach(s => {
+        (a.serviceIds || (a as any).services || []).forEach(s => {
           sCounts[s] = (sCounts[s] || 0) + 1;
           totalServices++;
         });
@@ -55,7 +55,30 @@ function ReportsPage() {
       tAppt += apptRev;
       tPkg += pkgRev;
 
-      return {
+      
+    const staffStats = masterTherapists.map(t => {
+      let totalCommission = 0;
+      let servicesCount = 0;
+      let apptsCount = 0;
+      
+      const appts = appointments.filter(a => a.status === 'xong' && a.therapistId === t.id && a.date >= fromDate && a.date <= toDate);
+      apptsCount = appts.length;
+      
+      appts.forEach(a => {
+        (a.serviceIds || (a as any).services || []).forEach(sid => {
+          const s = serviceOptions.find(opt => opt.id === sid);
+          if (s && s.commission) {
+            totalCommission += s.commission;
+          }
+          servicesCount++;
+        });
+      });
+      
+      return { id: t.id, name: t.name, totalCommission, servicesCount, apptsCount };
+    });
+
+    return {
+      staffStats,
         date: dayStr,
         appointmentRevenue: apptRev,
         packageRevenue: pkgRev,
@@ -72,7 +95,30 @@ function ReportsPage() {
       }))
       .sort((a, b) => b.count - a.count);
 
+    
+    const staffStats = masterTherapists.map(t => {
+      let totalCommission = 0;
+      let servicesCount = 0;
+      let apptsCount = 0;
+      
+      const appts = appointments.filter(a => a.status === 'xong' && a.therapistId === t.id && a.date >= fromDate && a.date <= toDate);
+      apptsCount = appts.length;
+      
+      appts.forEach(a => {
+        (a.serviceIds || (a as any).services || []).forEach(sid => {
+          const s = serviceOptions.find(opt => opt.id === sid);
+          if (s && s.commission) {
+            totalCommission += s.commission;
+          }
+          servicesCount++;
+        });
+      });
+      
+      return { id: t.id, name: t.name, totalCommission, servicesCount, apptsCount };
+    });
+
     return {
+      staffStats,
       dataByDay: byDay,
       totalApptRev: tAppt,
       totalPkgRev: tPkg,
@@ -129,6 +175,51 @@ function ReportsPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  const exportCommissionToCsv = () => {
+    let csvContent = "\uFEFF"; // BOM for UTF-8 Excel support
+    csvContent += "Mã Lịch Hẹn,Ngày,Giờ,Khách Hàng,Dịch Vụ,KTV Thực Hiện,Hoa Hồng (VNĐ)\n";
+
+    const appts = appointments.filter(a => a.status === 'xong' && a.date >= fromDate && a.date <= toDate);
+    
+    appts.forEach((a) => {
+      const customerName = initialCustomers.find(c => c.id === a.customerId)?.name || a.customerId;
+      const therapistName = masterTherapists.find(t => t.id === a.therapistId)?.name || a.therapistId;
+      
+      const serviceNames = [];
+      let totalCommission = 0;
+      (a.serviceIds || (a as any).services || []).forEach(sid => {
+        const s = serviceOptions.find(opt => opt.id === sid);
+        if (s) {
+          serviceNames.push(s.name);
+          if (s.commission) totalCommission += s.commission;
+        } else {
+          serviceNames.push(sid);
+        }
+      });
+      
+      const row = [
+        `"${a.id}"`,
+        `"${a.date}"`,
+        `"${a.time}"`,
+        `"${customerName}"`,
+        `"${serviceNames.join(", ")}"`,
+        `"${therapistName}"`,
+        `"${totalCommission}"`
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `BaoCao_HoaHongKTV_${fromDate}_den_${toDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
   return (
     <div className="space-y-6">
@@ -244,6 +335,52 @@ function ReportsPage() {
           <p className="mt-4 text-sm text-ink/50 italic">Chưa có dịch vụ nào hoàn thành trong khoảng thời gian này.</p>
         )}
       </section>
+
+      <section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6 mt-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="font-display text-2xl text-ink">Báo Cáo Hoa Hồng KTV</h2>
+            <p className="mt-1 text-sm text-ink/65">Thống kê số dịch vụ và tiền hoa hồng trong kỳ báo cáo (Không phân biệt thanh toán tiền mặt hay trừ thẻ).</p>
+          </div>
+          <button 
+            type="button" 
+            onClick={exportCommissionToCsv}
+            className="flex shrink-0 items-center gap-2 rounded-[3px] bg-emerald px-4 py-2.5 text-xs font-semibold text-ivory transition hover:bg-emerald-soft"
+          >
+            <Download className="size-4" />
+            Xuất Excel KTV
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto rounded-[3px] border border-ink/10 bg-ivory">
+          <table className="w-full min-w-[500px] text-left text-sm">
+            <thead className="border-b border-ink/10 bg-ink/5 text-xs uppercase tracking-wider text-ink/50">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Nhân viên</th>
+                <th className="px-4 py-3 font-semibold text-right">Số lịch hẹn</th>
+                <th className="px-4 py-3 font-semibold text-right">Số dịch vụ thực hiện</th>
+                <th className="px-4 py-3 font-semibold text-right">Tổng hoa hồng</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink/5">
+              {staffStats.map(staff => (
+                <tr key={staff.id} className="transition hover:bg-ivory/60">
+                  <td className="px-4 py-3.5 font-medium text-ink/80">{staff.name}</td>
+                  <td className="px-4 py-3.5 text-right font-medium text-ink/70">{staff.apptsCount}</td>
+                  <td className="px-4 py-3.5 text-right font-medium text-ink/70">{staff.servicesCount}</td>
+                  <td className="px-4 py-3.5 text-right font-bold text-emerald">{formatVnd(staff.totalCommission)}</td>
+                </tr>
+              ))}
+              {staffStats.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-ink/50">Không có dữ liệu trong khoảng thời gian này</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
     </div>
   );
 }

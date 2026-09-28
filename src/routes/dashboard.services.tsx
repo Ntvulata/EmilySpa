@@ -53,7 +53,7 @@ function ServicesPage() {
   const [open, setOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const emptyService = { id: "", name: "", duration: "60", price: "" };
+  const emptyService = { id: "", name: "", duration: "60", price: "", commission: "" };
   const [form, setForm] = useState(emptyService);
   const update = (key: keyof typeof form) => (e: { target: { value: string } }) => {
     let val = e.target.value;
@@ -66,7 +66,7 @@ function ServicesPage() {
 
   const editService = (i: number) => {
     const s = services[i]!;
-    setForm({ id: s.id, name: s.name, duration: s.duration.replace(/\D/g, ""), price: s.price ? Number(s.price).toLocaleString("en-US") : "" });
+    setForm({ id: s.id, name: s.name, duration: s.duration.replace(/\D/g, ""), price: s.price ? Number(s.price).toLocaleString("en-US") : "", commission: s.commission ? Number(s.commission).toLocaleString("en-US") : "0" });
     setEditIdx(i);
     setOpen(true);
     setError("");
@@ -87,11 +87,12 @@ function ServicesPage() {
     e.preventDefault();
     const name = form.name.trim();
     const price = Number(form.price.replace(/\D/g, ""));
+    const commission = Number(form.commission.replace(/\D/g, ""));
     const minutes = Number(form.duration);
     if (!name || !price || !minutes) return setError("Vui lòng nhập tên dịch vụ, thời lượng và giá.");
     if (services.some((s, i) => i !== editIdx && s.name.toLowerCase() === name.toLowerCase()))
       return setError("Dịch vụ này đã có trong danh mục.");
-    const item = { id: form.id || ("SRV_" + Date.now()), name, duration: `${minutes} phút`, price };
+    const item = { id: form.id || ("SRV_" + Date.now()), name, duration: `${minutes} phút`, price, commission };
     if (editIdx !== null) {
       const oldName = services[editIdx].name;
       setServices((l) => l.map((s, i) => (i === editIdx ? item : s)));
