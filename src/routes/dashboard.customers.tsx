@@ -138,7 +138,7 @@ function CustomersPage() {
                     const name = parts[0].trim();
                     const phone = parts[1].trim();
                     if (name && phone) {
-                      const newCust = { name, phone, tier: "Mới" };
+                      const newCust = { id: "CUST_" + Date.now() + Math.random().toString(36).substr(2, 5), name, phone, visits: 0, activePackages: [], tier: "Mới" };
                       setCustomers(l => {
                         if (!l.find(c => c.phone === phone)) return [...l, newCust];
                         return l;

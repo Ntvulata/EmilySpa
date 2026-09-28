@@ -57,7 +57,7 @@ function ServicesPage() {
   const [form, setForm] = useState(emptyService);
   const update = (key: keyof typeof form) => (e: { target: { value: string } }) => {
     let val = e.target.value;
-    if (key === "price") {
+    if (key === "price" || key === "commission") {
       const num = val.replace(/\D/g, "");
       val = num ? Number(num).toLocaleString("en-US") : "";
     }
@@ -87,7 +87,7 @@ function ServicesPage() {
     e.preventDefault();
     const name = form.name.trim();
     const price = Number(form.price.replace(/\D/g, ""));
-    const commission = Number(form.commission.replace(/\D/g, ""));
+    const commission = form.commission ? Number(form.commission.replace(/\D/g, "")) : 0;
     const minutes = Number(form.duration);
     if (!name || !price || !minutes) return setError("Vui lòng nhập tên dịch vụ, thời lượng và giá.");
     if (services.some((s, i) => i !== editIdx && s.name.toLowerCase() === name.toLowerCase()))
@@ -303,7 +303,7 @@ function ServicesPage() {
                         const duration = Number(parts[1].trim());
                         const price = Number(parts[2].trim());
                         if (name && duration && price) {
-                          const item = { name, duration: `${duration} phút`, price };
+                          const item = { id: "SRV_" + Date.now() + Math.random().toString(36).substr(2, 5), name, duration: `${duration} phút`, price, commission: 0 };
                           setServices(l => {
                             if (!l.find(s => s.name === name)) return [...l, item];
                             return l;
@@ -333,7 +333,7 @@ function ServicesPage() {
           {open && (
             <form onSubmit={submit} className="mb-4 border-y border-ink/10 py-4">
               <p className="mb-3 text-sm font-semibold text-ink">{editIdx !== null ? "Sửa dịch vụ" : "Dịch vụ mới"}</p>
-              <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+              <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_1fr]">
                 <label className="space-y-1.5 text-xs font-semibold text-ink/60">
                   Tên dịch vụ
                   <input className={inputClass} value={form.name} onChange={update("name")} placeholder="VD: Massage cổ vai gáy" />
@@ -346,6 +346,12 @@ function ServicesPage() {
                   Giá (₫)
                   <input className={inputClass} value={form.price} onChange={update("price")} inputMode="numeric" placeholder="500000" />
                 </label>
+
+                  <label className="space-y-1.5 text-xs font-semibold text-ink/60">
+                    Hoa hồng KTV (VNĐ)
+                    <input className={inputClass} value={form.commission} onChange={update("commission")} inputMode="numeric" placeholder="VD: 50,000" />
+                  </label>
+
               </div>
               {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
               <div className="mt-4 flex justify-end gap-2">
@@ -361,7 +367,10 @@ function ServicesPage() {
                   <p className="truncate text-sm font-medium text-ink">{item.name}</p>
                   <p className="text-xs text-ink/50">{item.duration}</p>
                 </div>
-                <span className="shrink-0 text-sm font-semibold text-emerald">{formatVnd(item.price)}</span>
+                <div className="flex flex-col items-end shrink-0 justify-center min-w-[80px]">
+                    <span className="text-sm font-semibold text-emerald">{formatVnd(item.price)}</span>
+                    {item.commission ? <span className="text-[11px] italic text-ink/50 font-medium mt-0.5">{formatVnd(item.commission)}</span> : null}
+                  </div>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => editService(i)} className={editBtn}>
                     <Pencil className="size-3" /> Sửa

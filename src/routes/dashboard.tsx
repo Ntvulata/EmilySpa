@@ -146,7 +146,7 @@ function DashboardLayout() {
           {/* Footer */}
           <footer className="mt-auto border-t border-ink/5 bg-ivory/50 px-5 py-4 text-center sm:px-8">
             <p className="text-[11px] font-medium text-ink/40 uppercase tracking-[0.05em]">
-              &copy; 2026 Emily Spa &bull; Luxury Management &bull; Phát triển bởi <span className="font-bold text-ink/60">Nguyễn Tuấn Vũ</span> &bull; <Phone className="inline-block size-3.5 -mt-0.5 mr-0.5" /> 0943.867.865
+              &copy; 2026 Emily Spa &bull; Crafted by <span className="font-bold text-ink/60">Nguyễn Tuấn Vũ &times; AI</span> &bull; <Phone className="inline-block size-3.5 -mt-0.5 mr-0.5" /> 0943.867.865
             </p>
           </footer>
         </div>
