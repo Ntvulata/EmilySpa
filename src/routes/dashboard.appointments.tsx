@@ -259,12 +259,12 @@ function AppointmentsPage() {
     // Thu thập tất cả các gói từ history
     const pkgIds = new Set<string>();
     packageHistory
-      .filter(h => h.customer === form.customerId)
+      .filter(h => h.customerId === form.customerId)
       .forEach(h => pkgIds.add(h.packageId));
     
     // Fallback lấy từ initialCustomers nếu cần (nếu chưa có trong history)
     const c = initialCustomers.find(x => x.id === form.customerId);
-    if (c) c.activePackages.forEach(p => pkgIds.add(p.id));
+    if (c) c.activePackages.forEach(p => pkgIds.add(p.packageId));
 
     const active: { id: string, name: string, type: 'sessions' | 'balance', remaining: number }[] = [];
     pkgIds.forEach(id => {
@@ -345,7 +345,7 @@ function AppointmentsPage() {
     }
   };
 
-  const processPackageDeduction = (apptId: string, customer: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number) => {
+  const processPackageDeduction = (apptId: string, customerId: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number) => {
     const nextId = "HT-" + Date.now();
     const note = `Làm dịch vụ ${apptId}`;
     const valueChange = type === "sessions" ? -dedSessions : -dedBalance;
@@ -395,7 +395,7 @@ function AppointmentsPage() {
         const t = getPackageType(updatedAppt.packageUsed);
         newRecord = processPackageDeduction(
           updatedAppt.id, 
-          updatedAppt.customer, 
+          updatedAppt.customerId, 
           updatedAppt.packageUsed, 
           t, 
           updatedAppt.sessionsDeducted || 0, 
@@ -483,7 +483,7 @@ function AppointmentsPage() {
         if (isNewlyCompleted && form.packageUsed) {
           newHistoryRecord = processPackageDeduction(
             savedAppt.id, 
-            savedAppt.customer, 
+            savedAppt.customerId, 
             form.packageUsed, 
             t, 
             savedAppt.sessionsDeducted || 0, 
@@ -516,7 +516,7 @@ function AppointmentsPage() {
       if (form.status === "xong" && form.packageUsed) {
         newHistoryRecord = processPackageDeduction(
           savedAppt.id, 
-          savedAppt.customer, 
+          savedAppt.customerId, 
           form.packageUsed, 
           t, 
           savedAppt.sessionsDeducted || 0, 

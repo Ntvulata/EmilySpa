@@ -107,7 +107,7 @@ export type PackageHistoryRecord = {
   id: string;
   date: string;
   type: "sell" | "deduct" | "convert" | "refund";
-  customer: string;
+  customerId: string;
   packageId: string;
   valueChange: number;
   pricePaid?: number;
