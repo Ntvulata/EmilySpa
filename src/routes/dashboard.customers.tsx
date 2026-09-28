@@ -100,7 +100,7 @@ function CustomersPage() {
     
     const active: { packageId: string, remaining: number }[] = [];
     pkgIds.forEach(id => {
-      const rem = getRemainingPackageValue(customerName, id);
+      const rem = getRemainingPackageValue(customerId, id);
       if (rem > 0) active.push({ packageId: id, remaining: rem });
     });
     return active;

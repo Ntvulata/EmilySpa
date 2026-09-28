@@ -106,7 +106,7 @@ export const formatVnd = (value: number) => `${(value || 0).toLocaleString("vi-V
 export type PackageHistoryRecord = {
   id: string;
   date: string;
-  type: "sell" | "deduct";
+  type: "sell" | "deduct" | "convert" | "refund";
   customer: string;
   packageId: string;
   valueChange: number;
