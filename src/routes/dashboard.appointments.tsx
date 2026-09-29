@@ -226,7 +226,8 @@ function AppointmentsPage() {
     price: string;
     sessionsDeducted: string;
     balanceDeducted: string;
-  }>({
+    note: string;
+}>({
     date: new Date().toISOString().split("T")[0],
     time: getNext15MinTime(),
       endTime: getNext15MinTime(60),
@@ -237,8 +238,9 @@ function AppointmentsPage() {
     packageUsed: "",
         price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
         sessionsDeducted: "1",
-    balanceDeducted: ""
-  });
+    balanceDeducted: "",
+        note: ""
+      });
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -338,7 +340,7 @@ function AppointmentsPage() {
     setForm({
       date: item.date,
       time: item.time,
-        endTime: item.endTime || item.time,
+        endTime: item.endTime || calculateEndTime(item.time, item.serviceIds || (item as any).services || [], serviceOptions),
       customerId: item.customerId,
       serviceIds: [...(item.serviceIds || (item as any).services || [])],
       therapistId: item.therapistId,
@@ -346,8 +348,9 @@ function AppointmentsPage() {
       packageUsed: item.packageUsed || "",
       price: item.price ? Number(item.price).toLocaleString("en-US") : "",
       sessionsDeducted: item.sessionsDeducted ? String(item.sessionsDeducted) : "1",
-      balanceDeducted: item.balanceDeducted ? Number(item.balanceDeducted).toLocaleString("en-US") : ""
-    });
+      balanceDeducted: item.balanceDeducted ? Number(item.balanceDeducted).toLocaleString("en-US") : "",
+        note: item.note || ""
+      });
     setEditId(item.id);
     setOpen(true);
     setError("");
@@ -381,7 +384,7 @@ function AppointmentsPage() {
       id: nextId,
       date: new Date().toISOString().split("T")[0],
       type: "deduct",
-      customer,
+      customerId,
       packageId,
       valueChange,
       note,
@@ -445,127 +448,156 @@ function AppointmentsPage() {
   };
 
   const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!form.customerId) return setError("Vui lòng chọn khách hàng.");
-    if (!form.endTime || form.endTime <= form.time) return setError("Giờ kết thúc phải sau giờ bắt đầu.");
-    
-    // Check overlap
-    const hasOverlap = appts.some(app => {
-      if (app.id === editId || app.status === 'huy' || app.date !== form.date || app.therapistId !== form.therapistId) return false;
-      const appEndTime = app.endTime || app.time; // fallback
-      return form.time < appEndTime && form.endTime > app.time;
-    });
-    
-    if (hasOverlap) return setError("KTV này đã có lịch hẹn khác trong khoảng thời gian này! Vui lòng chọn giờ hoặc KTV khác.");
-
-      if (form.serviceIds.length === 0) return setError("Vui lòng chọn ít nhất 1 dịch vụ.");
-    
-    const p = form.price ? Number(form.price.replace(/\D/g, "")) : 0;
-    const s = form.sessionsDeducted ? Number(form.sessionsDeducted.replace(/\D/g, "")) : 0;
-    const b = form.balanceDeducted ? Number(form.balanceDeducted.replace(/\D/g, "")) : 0;
-
-    const t = getPackageType(form.packageUsed);
-
-    if (form.packageUsed) {
-      const rem = getRemainingPackageValue(form.customerId, form.packageUsed);
-      if (t === "sessions" && form.status === "xong" && !editId) {
-        if (s > rem) return setError(`Thẻ này chỉ còn ${rem} buổi, không đủ để trừ ${s} buổi.`);
-      }
-      if (t === "balance" && form.status === "xong" && !editId) {
-        if (b > rem) return setError(`Thẻ này chỉ còn ${formatVnd(rem)}, không đủ để trừ ${formatVnd(b)}.`);
-      }
-    }
-
-    let savedAppt: Appointment;
-    let newHistoryRecord: any = null;
-    let deletedHistoryId: string | null = null;
-
-    if (editId) {
-      const oldAppt = initialAppointments.find(x => x.id === editId);
+    try {
+      e.preventDefault();
       
-      const isRevertingCompleted = oldAppt?.status === "xong" && form.status !== "xong";
-      if (isRevertingCompleted && oldAppt?.packageUsed) {
-        if (window.confirm(`Bạn có muốn HOÀN LẠI số dư/buổi cho khách không?\nTrạng thái đổi từ 'Hoàn thành' sang '${form.status}'`)) {
-          const toDelete = packageHistory.filter(h => h.appointmentId === editId && h.type === "deduct");
-          if (toDelete.length > 0) {
-            deletedHistoryId = toDelete.map(h => h.id) as any;
-            toDelete.forEach(r => {
-              const idx = packageHistory.findIndex(h => h.id === r.id);
-              if (idx !== -1) packageHistory.splice(idx, 1);
-            });
+      let finalEndTime = form.endTime || form.time;
+      if (form.status === "xong") {
+        try {
+          const now = new Date();
+          const currentHHMM = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+          const localDate = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+          if (form.date === localDate) {
+            if (finalEndTime > currentHHMM) finalEndTime = currentHHMM;
           }
+        } catch (e) {
+          console.error(e);
+        }
+        if (finalEndTime < form.time) finalEndTime = form.time;
+      }
+
+      if (!form.customerId) { alert("Vui lòng chọn khách hàng."); return; }
+      if (finalEndTime < form.time) { alert("Giờ kết thúc không được nhỏ hơn giờ bắt đầu."); return; }
+
+      const hasOverlap = appts.some(app => {
+        if (app.id === editId || app.status === 'huy' || app.date !== form.date || app.therapistId !== form.therapistId) return false;
+        const appEndTime = app.endTime || app.time;
+        return form.time < appEndTime && finalEndTime > app.time;
+      });
+
+      if (hasOverlap) { alert("KTV này đã có lịch hẹn khác trong khoảng thời gian này!"); return; }
+      if (form.serviceIds.length === 0) { alert("Vui lòng chọn ít nhất 1 dịch vụ."); return; }
+
+      const p = form.price ? Number(String(form.price).replace(/\D/g, "")) : 0;
+      const s = form.sessionsDeducted ? Number(String(form.sessionsDeducted).replace(/\D/g, "")) : 0;
+      const b = form.balanceDeducted ? Number(String(form.balanceDeducted).replace(/\D/g, "")) : 0;
+      const t = getPackageType(form.packageUsed);
+
+      if (form.packageUsed) {
+        let rem = getRemainingPackageValue(form.customerId, form.packageUsed);
+        if (editId) {
+          const oldAppt = initialAppointments.find(x => x.id === editId);
+          if (oldAppt && oldAppt.status === "xong" && oldAppt.packageUsed === form.packageUsed) {
+            if (t === "sessions") rem += (oldAppt.sessionsDeducted || 0);
+            if (t === "balance") rem += (oldAppt.balanceDeducted || 0);
+          }
+        }
+        if (form.status === "xong") {
+          if (t === "sessions" && s > rem) { alert(`Thẻ này chỉ còn ${rem} buổi, không đủ để trừ ${s} buổi.`); return; }
+          if (t === "balance" && b > rem) { alert(`Thẻ này chỉ còn ${formatVnd(rem)}, không đủ để trừ ${formatVnd(b)}.`); return; }
         }
       }
 
-      if (oldAppt) {
+      let savedAppt: Appointment;
+      let newHistoryRecord: any = null;
+      let deletedHistoryId: string | null = null;
+
+      if (editId) {
+        const oldAppt = initialAppointments.find(x => x.id === editId);
+        if (!oldAppt) { alert("Lỗi: Không tìm thấy lịch hẹn cũ."); return; }
+
+        const isRevertingCompleted = oldAppt?.status === "xong" && form.status !== "xong";
+        const isChangingDeduction = oldAppt?.status === "xong" && form.status === "xong" && oldAppt?.packageUsed && (
+            oldAppt.packageUsed !== form.packageUsed || 
+            oldAppt.sessionsDeducted !== s || 
+            oldAppt.balanceDeducted !== b
+        );
+  
+        if ((isRevertingCompleted || isChangingDeduction) && oldAppt?.packageUsed) {
+            if (!isRevertingCompleted || window.confirm(`Bạn có muốn HOÀN LẠI số dư/buổi cho khách không?\nTrạng thái đổi từ 'Hoàn thành' sang '${form.status}'`)) {
+              const toDelete = packageHistory.filter(h => h.appointmentId === editId && h.type === "deduct");
+              if (toDelete.length > 0) {
+                deletedHistoryId = toDelete[0].id;
+                toDelete.forEach(r => {
+                  const idx = packageHistory.findIndex(h => h.id === r.id);
+                  if (idx !== -1) packageHistory.splice(idx, 1);
+                });
+              }
+            }
+        }
+  
         savedAppt = {
-          ...oldAppt,
-          ...form,
-          price: p,
-          sessionsDeducted: s,
-          balanceDeducted: b
+            ...oldAppt,
+            ...form,
+            endTime: finalEndTime,
+            price: p,
+            sessionsDeducted: s,
+            balanceDeducted: b,
+            note: form.note ? String(form.note).trim() : ""
         };
 
         const isNewlyCompleted = oldAppt.status !== "xong" && form.status === "xong";
-        if (isNewlyCompleted && form.packageUsed) {
-          newHistoryRecord = processPackageDeduction(
-            savedAppt.id, 
-            savedAppt.customerId, 
-            form.packageUsed, 
-            t, 
-            savedAppt.sessionsDeducted || 0, 
-            savedAppt.balanceDeducted || 0
-          );
+        if ((isNewlyCompleted || isChangingDeduction) && form.packageUsed) {
+            newHistoryRecord = processPackageDeduction(
+              savedAppt.id, 
+              savedAppt.customerId, 
+              form.packageUsed, 
+              t as any, 
+              savedAppt.sessionsDeducted || 0, 
+              savedAppt.balanceDeducted || 0
+            );
         }
 
         const idx = initialAppointments.findIndex(x => x.id === editId);
         if (idx !== -1) initialAppointments[idx] = savedAppt;
         setAppts([...initialAppointments]);
         setNotice("Đã cập nhật lịch hẹn.");
+      } else {
+        const nextId = "LH-" + (initialAppointments.length + 2001);
+        savedAppt = {
+          id: nextId,
+          date: form.date,
+          time: form.time,
+          endTime: finalEndTime,
+          customerId: form.customerId,
+          services: [...form.serviceIds],
+          therapistId: form.therapistId,
+          status: form.status,
+          packageUsed: form.packageUsed,
+          price: p,
+          sessionsDeducted: s,
+          balanceDeducted: b,
+          note: form.note ? String(form.note).trim() : ""
+        };
+
+        if (form.status === "xong" && form.packageUsed) {
+          newHistoryRecord = processPackageDeduction(
+            savedAppt.id, 
+            savedAppt.customerId, 
+            form.packageUsed, 
+            t as any, 
+            savedAppt.sessionsDeducted || 0, 
+            savedAppt.balanceDeducted || 0
+          );
+        }
+
+        initialAppointments.push(savedAppt);
+        setAppts([...initialAppointments]);
+        setNotice("Đã thêm lịch hẹn mới.");
       }
-    } else {
-      const nextId = "LH-" + (initialAppointments.length + 2001);
-      savedAppt = {
-        id: nextId,
-        date: form.date,
-        time: form.time,
-          endTime: form.endTime,
-        customerId: form.customerId,
-        services: [...form.serviceIds],
-        therapistId: form.therapistId,
-        status: form.status,
-        packageUsed: form.packageUsed,
-        price: p,
-        sessionsDeducted: s,
-        balanceDeducted: b
-      };
 
-      if (form.status === "xong" && form.packageUsed) {
-        newHistoryRecord = processPackageDeduction(
-          savedAppt.id, 
-          savedAppt.customerId, 
-          form.packageUsed, 
-          t, 
-          savedAppt.sessionsDeducted || 0, 
-          savedAppt.balanceDeducted || 0
-        );
+      try {
+        await fbSaveAppointmentAndHistory(savedAppt, newHistoryRecord, deletedHistoryId);
+      } catch (err: any) {
+        alert("Lỗi lưu Cloud: " + err.message);
+        console.error(err);
       }
-
-      initialAppointments.push(savedAppt);
-      setAppts([...initialAppointments]);
-      setNotice("Đã thêm lịch hẹn mới.");
+      
+      setOpen(false);
+    } catch (criticalError: any) {
+      alert("Lỗi kĩ thuật (Crash): " + criticalError.message);
     }
-
-    try {
-      await fbSaveAppointmentAndHistory(savedAppt!, newHistoryRecord, deletedHistoryId);
-    } catch (err) {
-      console.error(err);
-      setError("Lỗi lưu Cloud.");
-    }
-    
-    setOpen(false);
   };
-
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -747,8 +779,18 @@ function AppointmentsPage() {
               </div>
             </div>
 
-          </div>
-          {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
+          <label className="space-y-1.5 sm:col-span-2">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Ghi chú</span>
+                <textarea 
+                  className={inputClass} 
+                  rows={2}
+                  value={form.note} 
+                  onChange={e => setForm({...form, note: e.target.value})} 
+                  placeholder="Ghi chú thêm về lịch hẹn, yêu cầu của khách..."
+                />
+              </label>
+            </div>
+            {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
           <div className="mt-5 flex items-center justify-between">
               {editId && form.status !== 'dang' && form.status !== 'xong' ? (
                 <button 
@@ -764,8 +806,9 @@ function AppointmentsPage() {
               ) : (
                 <div></div>
               )}
+              
               <div className="flex gap-3">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-ink/15 px-5 py-2.5 text-xs font-semibold text-ink/70 transition-all hover:bg-ink/5 hover:border-ink/25">Huỷ</button>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-ink/15 px-5 py-2.5 text-xs font-semibold text-ink/70 transition-all hover:bg-ink/5 hover:border-ink/25">Huỷ</button>
             <button type="submit" className="rounded-lg bg-emerald px-6 py-2.5 text-xs font-bold text-ivory shadow-md shadow-emerald/25 transition-all hover:bg-emerald-soft hover:shadow-lg hover:shadow-emerald/30 hover:-translate-y-0.5">Lưu lại</button>
           </div>
         </div>
@@ -1003,6 +1046,11 @@ function AppointmentsPage() {
                                   <span className="font-bold"> (-{getPackageType(appointment.packageUsed) === 'balance' ? formatVnd(appointment.balanceDeducted || 0) : `${appointment.sessionsDeducted || 0} buổi`})</span>
                                 </p>
                               )}
+                                {appointment.note && (
+                                  <p className="mt-1 text-[10px] italic opacity-80 border-l-2 pl-1.5 border-current">
+                                    {appointment.note}
+                                  </p>
+                                )}
                               {(appointment.price || 0) > 0 && (
                                 <p className="inline-block rounded-[3px] bg-ink/10 px-1.5 py-0.5 text-[9px] font-semibold text-ink" style={{ color: getGridCardStyle(appointment).color || undefined, backgroundColor: getGridCardStyle(appointment).color === "#FFFFFF" ? "rgba(255,255,255,0.2)" : undefined }}>
                                   Thu tiền: <span className="font-bold">{formatVnd(appointment.price || 0)}</span>

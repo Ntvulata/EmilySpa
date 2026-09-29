@@ -2,6 +2,7 @@ export type AppointmentStatus = "cho" | "dang" | "xong" | "huy";
 
 export type Appointment = {
   id: string;
+  note?: string;
   date: string;
   time: string;
   endTime?: string;
