@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Pencil, Trash2, CreditCard } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 
 import { formatVnd, therapists, serviceOptions, masterPackages } from "@/lib/spa-data";
-import { fbSaveService, fbDeleteService, fbSaveTherapist, fbDeleteTherapist, fbSaveMasterPackage, fbDeleteMasterPackage } from "@/lib/firebase";
+import { fbSaveService, fbDeleteService, fbSaveTherapist, fbDeleteTherapist, fbSaveMasterPackage, fbDeleteMasterPackage, fbGetTherapists } from "@/lib/firebase";
 
 export const Route = createFileRoute("/dashboard/services")({
   head: () => ({
@@ -182,6 +182,14 @@ function ServicesPage() {
 
   // Staff
   const [staff, setStaff] = useState(therapists.map(t => ({ role: "Kỹ thuật viên", phone: "", ...t })));
+  
+  useEffect(() => {
+    fbGetTherapists().then(data => {
+      if (data && data.length > 0) {
+        setStaff(data);
+      }
+    }).catch(console.error);
+  }, []);
   const [staffOpen, setStaffOpen] = useState(false);
   const [staffIdx, setStaffIdx] = useState<number | null>(null);
   const [staffError, setStaffError] = useState("");

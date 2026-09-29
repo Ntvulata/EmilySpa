@@ -161,3 +161,8 @@ export const fbSaveUser = async (user: any) => {
 export const fbDeleteUser = async (username: string) => {
   await deleteDoc(doc(db, "users", username));
 };
+
+export const fbGetTherapists = async () => {
+  const snap = await getDocs(collection(db, "therapists"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};

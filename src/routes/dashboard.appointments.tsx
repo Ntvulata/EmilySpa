@@ -2,7 +2,7 @@
 import { useState, useMemo, type FormEvent, useEffect, useRef } from "react";
 import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera } from "lucide-react";
 import { formatVnd, appointments as initialAppointments, initialCustomers, serviceOptions, masterPackages, type Appointment, type AppointmentStatus, getRemainingPackageValue, packageHistory, therapists as masterTherapists } from "@/lib/spa-data";
-import { fbSaveAppointment, fbSaveAppointmentAndHistory, fbDeleteAppointment } from "@/lib/firebase";
+import { fbSaveAppointment, fbSaveAppointmentAndHistory, fbDeleteAppointment, fbGetTherapists } from "@/lib/firebase";
 
 export const Route = createFileRoute("/dashboard/appointments")({
   head: () => ({
@@ -186,6 +186,17 @@ function AppointmentsPage() {
   const [fromDate, setFromDate] = useState(d.toISOString().split("T")[0]);
   const [toDate, setToDate] = useState(new Date().toISOString().split("T")[0]);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dbTherapists, setDbTherapists] = useState<any[]>([]);
+  useEffect(() => {
+    fbGetTherapists().then(data => {
+      if (data && data.length > 0) {
+        setDbTherapists(data);
+      } else {
+        setDbTherapists(masterTherapists);
+      }
+    }).catch(console.error);
+  }, []);
+
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 
   useEffect(() => {
@@ -233,7 +244,7 @@ function AppointmentsPage() {
       endTime: getNext15MinTime(60),
     customerId: "",
     serviceIds: serviceOptions.length > 0 ? [serviceOptions[0].id] : [""],
-    therapistId: masterTherapists[0].id,
+    therapistId: dbTherapists[0]?.id || dbTherapists[0]?.name || "",
     status: "cho",
     packageUsed: "",
         price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
@@ -245,8 +256,8 @@ function AppointmentsPage() {
   const [notice, setNotice] = useState("");
 
   const timeSlots = ["09:00", "10:30", "13:00", "14:30", "16:00", "17:30", "19:00"];
-  const therapistNames = masterTherapists
-    .filter((t: any) => !t.role || t.role === "Kỹ thuật viên")
+  const therapistNames = dbTherapists
+      .filter((t: any) => !t.role || t.role.includes("thu") || t.role.includes("K1") || t.role === "Kỹ thuật viên")
     .map(t => t.name);
 
   const getPackageName = (id?: string) => {
@@ -272,12 +283,17 @@ function AppointmentsPage() {
     }).sort((a, b) => a.time.localeCompare(b.time));
   }, [appts, fromDate, toDate, statusFilter, viewMode]);
 
-  const therapists = useMemo(() => {
-    return therapistNames.map(name => ({
-      name,
-      sessions: rows.filter(r => r.therapistId === name || r.therapist === name).length
-    }));
-  }, [rows]);
+    const therapists = useMemo(() => {
+    return therapistNames.map(name => {
+      const tObj = dbTherapists.find((d: any) => d.name === name);
+      const tId = tObj?.id || name;
+      return {
+        id: tId,
+        name,
+        sessions: rows.filter(r => r.therapistId === tId || r.therapistId === name || r.therapist === name).length
+      };
+    });
+  }, [rows, therapistNames, dbTherapists]);
 
   const customerOptions = initialCustomers.map(c => ({ value: c.id, label: `${c.name} - ${c.phone}` }));
 
@@ -323,7 +339,7 @@ function AppointmentsPage() {
       endTime: getNext15MinTime(60),
       customerId: "",
       serviceIds: serviceOptions.length > 0 ? [serviceOptions[0].id] : [""],
-      therapistId: masterTherapists[0].id,
+      therapistId: dbTherapists[0]?.id || dbTherapists[0]?.name || "",
       status: "cho",
       packageUsed: "",
         price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
@@ -741,7 +757,7 @@ function AppointmentsPage() {
             <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
               Kỹ thuật viên
               <select className={inputClass} value={form.therapistId} onChange={e => setForm({...form, therapistId: e.target.value})}>
-                {masterTherapists.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {dbTherapists.map(t => <option key={t.id || t.name} value={t.id || t.name}>{t.name}</option>)}
               </select>
             </label>
             <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
@@ -873,13 +889,14 @@ function AppointmentsPage() {
           <table className="w-full min-w-[900px] border-collapse text-left">
             <thead className="sticky top-0 z-20 bg-ivory-deep/95 shadow-sm backdrop-blur">
               <tr className="border-b border-ink/10 text-[10px] uppercase tracking-[0.16em] text-ink/50">
-                <th className="px-4 py-3 font-semibold">Khách Hàng</th>
-                <th className="px-4 py-3 font-semibold">Dịch Vụ</th>
-                <th className="px-4 py-3 font-semibold">Kỹ Thuật Viên</th>
-                <th className="px-4 py-3 font-semibold">Thẻ Áp Dụng</th>
-                <th className="px-4 py-3 font-semibold text-right">Chi Tiết T.Toán</th>
-                <th className="px-4 py-3 font-semibold">Trạng Thái</th>
-                <th className="px-4 py-3 font-semibold text-right">Thao Tác</th>
+                <th className="px-4 py-3 font-semibold w-[15%]">Khách Hàng</th>
+                  <th className="px-4 py-3 font-semibold w-[22%]">Dịch Vụ</th>
+                  <th className="px-4 py-3 font-semibold w-[15%]">Ghi Chú</th>
+                  <th className="px-4 py-3 font-semibold w-[11%]">KTV</th>
+                  <th className="px-4 py-3 font-semibold w-[11%]">Thẻ</th>
+                  <th className="px-4 py-3 font-semibold text-right w-[10%]">T.Toán</th>
+                  <th className="px-4 py-3 font-semibold w-[10%]">Trạng Thái</th>
+                  <th className="px-4 py-3 font-semibold text-right w-20">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/10 text-sm">
@@ -897,7 +914,8 @@ function AppointmentsPage() {
                         <span key={idx} className="inline-block px-1.5 py-0.5 rounded-[2px] bg-ink/5 text-[11px] text-ink/80">{s}</span> ); })}
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-ink/75">{masterTherapists.find(t => t.id === item.therapistId)?.name || "Unknown"}</td>
+                  <td className="px-4 py-3.5 text-ink/75 text-xs italic break-words">{item.note || <span className="text-ink/30 opacity-50">-</span>}</td>
+                    <td className="px-4 py-3.5 text-ink/75">{dbTherapists.find(t => t.id === item.therapistId)?.name || "Unknown"}</td>
                   <td className="px-4 py-3.5 text-xs font-medium text-emerald">{getPackageName(item.packageUsed)}</td>
                   <td className="px-4 py-3.5 text-right font-semibold">
                     {type === "none" && <span className="text-ink">{formatVnd(item.price || 0)}</span>}
@@ -1008,7 +1026,7 @@ function AppointmentsPage() {
                   
                   {/* Cards */}
                   {therapists.map((therapist, colIdx) => (
-                    rows.filter(r => r.therapistId === therapist.id || r.therapist === therapist.name).map(appointment => {
+                    rows.filter(r => { const tId = r.therapistId || r.therapist || dbTherapists[0]?.name || ""; return tId === therapist.id || tId === therapist.name; }).map(appointment => {
                       const startMins = appointment.time.split(':').reduce((h, m) => h * 60 + Number(m), 0) - 8 * 60;
                       const endMins = appointment.endTime ? appointment.endTime.split(':').reduce((h, m) => h * 60 + Number(m), 0) - 8 * 60 : startMins + 60;
                       const startRow = Math.max(0, Math.floor(startMins / 15)) + 1;

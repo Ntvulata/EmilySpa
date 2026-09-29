@@ -1,7 +1,7 @@
 ﻿const fs = require('fs');
 let code = fs.readFileSync('src/routes/dashboard.appointments.tsx', 'utf8');
 
-code = code.replace(/masterTherapists\[0\]\.id/g, 'masterTherapists[0].id || masterTherapists[0].name');
+code = code.replace(/K\? thu\?t vi.n/g, 'Kỹ thuật viên');
 
 fs.writeFileSync('src/routes/dashboard.appointments.tsx', code, 'utf8');
-console.log("Fixed startNew therapistId");
+console.log("Fixed KTV encoding in appointments");
