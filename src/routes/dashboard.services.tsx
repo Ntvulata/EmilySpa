@@ -300,10 +300,11 @@ function ServicesPage() {
                       const parts = lines[i].split(',');
                       if (parts.length >= 3) {
                         const name = parts[0].trim();
-                        const duration = Number(parts[1].trim());
-                        const price = Number(parts[2].trim());
-                        if (name && duration && price) {
-                          const item = { id: "SRV_" + Date.now() + Math.random().toString(36).substr(2, 5), name, duration: `${duration} phút`, price, commission: 0 };
+                          const duration = Number(parts[1].trim());
+                          const price = Number(parts[2].trim());
+                          const commission = parts.length >= 4 ? Number(parts[3].trim()) : 0;
+                          if (name && duration && price) {
+                            const item = { id: "SRV_" + Date.now() + Math.random().toString(36).substr(2, 5), name, duration: `${duration} phút`, price, commission: isNaN(commission) ? 0 : commission };
                           setServices(l => {
                             if (!l.find(s => s.name === name)) return [...l, item];
                             return l;

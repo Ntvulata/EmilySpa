@@ -94,7 +94,34 @@ function getNext15MinTime(addOffset = 0) {
   const mins = d.getMinutes();
   const remainder = mins % 15;
   const addMins = remainder === 0 ? 0 : 15 - remainder;
-  d.setMinutes(mins + addMins + addOffset);
+  d.setHours(d.getHours(), mins + addMins + addOffset, 0, 0);
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function calculateTotalPrice(services: string[], serviceOptions: any[]) {
+  let total = 0;
+  services.forEach(id => {
+    const s = serviceOptions.find(opt => opt.id === id);
+    if (s && s.price) total += Number(s.price);
+  });
+  return total;
+}
+
+function calculateEndTime(startTime: string, services: string[], serviceOptions: any[]) {
+  if (!startTime) return "";
+  let totalMinutes = 0;
+  services.forEach(id => {
+    const s = serviceOptions.find(opt => opt.id === id);
+    if (s && s.duration) {
+      const parsed = parseInt(s.duration.replace(/\D/g, ""));
+      if (!isNaN(parsed)) totalMinutes += parsed;
+    }
+  });
+  if (totalMinutes === 0) return startTime;
+  
+  const [h, m] = startTime.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m + totalMinutes, 0, 0);
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
@@ -208,8 +235,8 @@ function AppointmentsPage() {
     therapistId: masterTherapists[0].id,
     status: "cho",
     packageUsed: "",
-    price: "",
-    sessionsDeducted: "1",
+        price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
+        sessionsDeducted: "1",
     balanceDeducted: ""
   });
   const [error, setError] = useState("");
@@ -297,8 +324,8 @@ function AppointmentsPage() {
       therapistId: masterTherapists[0].id,
       status: "cho",
       packageUsed: "",
-      price: "",
-      sessionsDeducted: "1",
+        price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
+        sessionsDeducted: "1",
       balanceDeducted: ""
     });
     setEditId(null);
@@ -575,42 +602,56 @@ function AppointmentsPage() {
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
                 Bắt đầu
-                <input type="time" className={inputClass} value={form.time} onChange={e => setForm({...form, time: e.target.value})} />
+                <input type="time" className={inputClass} value={form.time} onChange={e => setForm({...form, time: e.target.value, endTime: calculateEndTime(e.target.value, form.serviceIds, serviceOptions)})} />
               </label>
               <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
                 Kết thúc
                 <input type="time" className={inputClass} value={form.endTime} onChange={e => setForm({...form, endTime: e.target.value})} />
               </label>
             </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Khách Hàng</label>
-              <SearchableSelect
-                options={customerOptions}
-                value={form.customerId}
-                onChange={(v) => { setForm({ ...form, customerId: v, packageUsed: "" }); setError(""); }}
-                placeholder="-- Chọn khách hàng --"
-              />
-            </div>
-            
-            {customerPackages.length > 0 && (
-              <div className="sm:col-span-2 space-y-1.5 p-3 rounded-[3px] border border-champagne/40 bg-champagne/10">
-                <label className="text-xs font-semibold text-ink/80 flex items-center gap-2">
-                  <span>Dùng Gói/Thẻ (Khách có {customerPackages.length} thẻ)</span>
-                </label>
-                <select 
-                  className={inputClass}
-                  value={form.packageUsed}
-                  onChange={e => setForm({...form, packageUsed: e.target.value})}
-                >
-                  <option value="">-- Không dùng thẻ (Thanh toán trực tiếp) --</option>
-                  {customerPackages.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} - Còn {p.type === "balance" ? formatVnd(p.remaining) : `${p.remaining} buổi`}
-                    </option>
-                  ))}
-                </select>
+            <div className={`sm:col-span-2 grid gap-4 ${customerPackages.length > 0 ? "grid-cols-3" : "grid-cols-1"}`}>
+              <div className={`space-y-1.5 ${customerPackages.length > 0 ? "col-span-2" : "col-span-1"}`}>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Khách Hàng</label>
+                <SearchableSelect
+                  options={customerOptions}
+                  value={form.customerId}
+                  onChange={(v) => { 
+                    const total = calculateTotalPrice(form.serviceIds, serviceOptions);
+                    setForm({ ...form, customerId: v, packageUsed: "", price: total > 0 ? total.toLocaleString("en-US") : "" }); 
+                    setError(""); 
+                  }}
+                  placeholder="-- Chọn khách hàng --"
+                />
               </div>
-            )}
+              
+              {customerPackages.length > 0 && (
+                <div className="col-span-1 space-y-1.5 p-2.5 rounded-[3px] border border-champagne/40 bg-champagne/10">
+                  <label className="text-[11px] font-bold uppercase tracking-wide text-ink/50 flex items-center gap-2">
+                    <span>Dùng Gói/Thẻ</span>
+                  </label>
+                  <select 
+                    className={inputClass}
+                    value={form.packageUsed}
+                    onChange={e => {
+                      const newPkg = e.target.value;
+                      let newPrice = form.price;
+                      if (!newPkg) {
+                        const total = calculateTotalPrice(form.serviceIds, serviceOptions);
+                        newPrice = total > 0 ? total.toLocaleString("en-US") : "";
+                      }
+                      setForm({...form, packageUsed: newPkg, price: newPrice});
+                    }}
+                  >
+                    <option value="">-- Không dùng --</option>
+                    {customerPackages.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} - Còn {p.type === "balance" ? formatVnd(p.remaining) : `${p.remaining} buổi`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-1.5 sm:col-span-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Dịch vụ</span>
@@ -619,13 +660,19 @@ function AppointmentsPage() {
                   <div key={i} className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
                         <SearchableSelect
-                          options={serviceOptions.map(s => ({ value: s.id, label: s.name }))}
+                          options={serviceOptions.map(s => ({ value: s.id, label: `${s.name} - ${s.price ? Number(s.price).toLocaleString("en-US") + " VNĐ" : "0 VNĐ"}` }))}
                           value={svc}
                           onChange={v => {
-                            const newS = [...form.serviceIds];
-                            newS[i] = v;
-                            setForm({...form, serviceIds: newS});
-                          }}
+                              const newS = [...form.serviceIds];
+                              newS[i] = v;
+                              const endTime = calculateEndTime(form.time, newS, serviceOptions);
+                              let newPrice = form.price;
+                              if (!form.packageUsed) {
+                                const total = calculateTotalPrice(newS, serviceOptions);
+                                newPrice = total > 0 ? total.toLocaleString("en-US") : "";
+                              }
+                              setForm({...form, serviceIds: newS, endTime, price: newPrice});
+                            }}
                           placeholder="-- Chọn dịch vụ --"
                         />
                       </div>
@@ -634,7 +681,13 @@ function AppointmentsPage() {
                           type="button" 
                           onClick={() => {
                             const newS = form.serviceIds.filter((_, idx) => idx !== i);
-                            setForm({...form, serviceIds: newS});
+                              const endTime = calculateEndTime(form.time, newS, serviceOptions);
+                              let newPrice = form.price;
+                              if (!form.packageUsed) {
+                                const total = calculateTotalPrice(newS, serviceOptions);
+                                newPrice = total > 0 ? total.toLocaleString("en-US") : "";
+                              }
+                              setForm({...form, serviceIds: newS, endTime, price: newPrice});
                           }}
                           className="text-ink/40 hover:text-red-500 p-1.5 transition"
                           title="Xóa"
