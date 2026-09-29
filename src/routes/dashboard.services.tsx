@@ -43,6 +43,9 @@ const editBtn =
   "inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald";
 
 function ServicesPage() {
+  const userStr = typeof window !== "undefined" ? localStorage.getItem("spa_user") : "{}";
+  let isAdmin = false;
+  try { isAdmin = JSON.parse(userStr || "{}")?.role === "admin"; } catch(e) {}
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState<"services" | "packages" | "staff">("services");
   const [searchService, setSearchService] = useState("");
@@ -381,12 +384,8 @@ function ServicesPage() {
                     {item.commission ? <span className="text-[11px] italic text-ink/50 font-medium mt-0.5">{formatVnd(item.commission)}</span> : null}
                   </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => editService(i)} className={editBtn}>
-                    <Pencil className="size-3" /> Sửa
-                  </button>
-                  <button type="button" onClick={() => deleteService(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500">
-                    <Trash2 className="size-3" /> Xóa
-                  </button>
+                  {isAdmin && <button type="button" onClick={() => editService(i)} className={editBtn}><Pencil className="size-3" /> Sửa</button>}
+                  {isAdmin && <button type="button" onClick={() => deleteService(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500"><Trash2 className="size-3" /> Xóa</button>}
                 </div>
               </li>
             ))}
@@ -576,12 +575,8 @@ function ServicesPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => editStaff(i)} className={editBtn}>
-                    <Pencil className="size-3" /> Sửa
-                  </button>
-                  <button type="button" onClick={() => deleteStaff(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500">
-                    <Trash2 className="size-3" /> Xóa
-                  </button>
+                  {isAdmin && <button type="button" onClick={() => editStaff(i)} className={editBtn}><Pencil className="size-3" /> Sửa</button>}
+                  {isAdmin && <button type="button" onClick={() => deleteStaff(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500"><Trash2 className="size-3" /> Xóa</button>}
                 </div>
               </li>
             ))}

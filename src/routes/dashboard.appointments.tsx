@@ -126,6 +126,10 @@ function calculateEndTime(startTime: string, services: string[], serviceOptions:
 }
 
 function AppointmentsPage() {
+  const userStr = typeof window !== "undefined" ? localStorage.getItem("spa_user") : "{}";
+  let isAdmin = false;
+  try { isAdmin = JSON.parse(userStr || "{}")?.role === "admin"; } catch(e) {}
+
 
   const handleCapture = async () => {
     setIsCapturing(true);
@@ -352,7 +356,20 @@ function AppointmentsPage() {
     setNotice("");
   };
 
+  
   const startEdit = (item: Appointment) => {
+    if (!isAdmin && item.status === "xong") {
+      const itemDate = new Date(item.date);
+      const today = new Date(new Date().toISOString().split("T")[0]);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (itemDate < yesterday) {
+        alert("Bạn không có quyền sửa lịch hẹn đã hoàn thành từ " + item.date + " (chỉ được sửa lịch của hôm nay và hôm qua).");
+        return;
+      }
+    }
+
     setForm({
       date: item.date,
       time: item.time,
@@ -375,6 +392,11 @@ function AppointmentsPage() {
   };
 
   const deleteItem = async (id: string) => {
+    const oldAppt = initialAppointments.find(x => x.id === id);
+    if (oldAppt && oldAppt.status === "xong") {
+      alert("Không thể xóa lịch hẹn đã Hoàn thành!");
+      return;
+    }
     if (window.confirm("Bạn có chắc muốn xóa lịch hẹn này?")) {
       setAppts((l) => l.filter(x => x.id !== id));
       const idx = initialAppointments.findIndex(x => x.id === id);
@@ -522,7 +544,11 @@ function AppointmentsPage() {
         const oldAppt = initialAppointments.find(x => x.id === editId);
         if (!oldAppt) { alert("Lỗi: Không tìm thấy lịch hẹn cũ."); return; }
 
-        const isRevertingCompleted = oldAppt?.status === "xong" && form.status !== "xong";
+        if (oldAppt.status === "xong" && form.status === "huy") {
+            alert("Lịch đang hoàn thành không được chuyển qua Hủy.");
+            return;
+          }
+          const isRevertingCompleted = oldAppt?.status === "xong" && form.status !== "xong";
         const isChangingDeduction = oldAppt?.status === "xong" && form.status === "xong" && oldAppt?.packageUsed && (
             oldAppt.packageUsed !== form.packageUsed || 
             oldAppt.sessionsDeducted !== s || 
@@ -530,16 +556,19 @@ function AppointmentsPage() {
         );
   
         if ((isRevertingCompleted || isChangingDeduction) && oldAppt?.packageUsed) {
-            if (!isRevertingCompleted || window.confirm(`Bạn có muốn HOÀN LẠI số dư/buổi cho khách không?\nTrạng thái đổi từ 'Hoàn thành' sang '${form.status}'`)) {
-              const toDelete = packageHistory.filter(h => h.appointmentId === editId && h.type === "deduct");
-              if (toDelete.length > 0) {
-                deletedHistoryId = toDelete[0].id;
-                toDelete.forEach(r => {
-                  const idx = packageHistory.findIndex(h => h.id === r.id);
-                  if (idx !== -1) packageHistory.splice(idx, 1);
-                });
-              }
+          if (isRevertingCompleted) {
+            if (!window.confirm(`Bạn có muốn HOÀN LẠI số dư/buổi cho khách không?\nTrạng thái đổi từ 'Hoàn thành' sang '${form.status}'`)) {
+              return; // Abort save if user clicks Cancel
             }
+          }
+          const toDelete = packageHistory.filter(h => h.appointmentId === editId && h.type === "deduct");
+          if (toDelete.length > 0) {
+            deletedHistoryId = toDelete[0].id;
+            toDelete.forEach(r => {
+              const idx = packageHistory.findIndex(h => h.id === r.id);
+              if (idx !== -1) packageHistory.splice(idx, 1);
+            });
+          }
         }
   
         savedAppt = {
@@ -808,7 +837,7 @@ function AppointmentsPage() {
             </div>
             {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
           <div className="mt-5 flex items-center justify-between">
-              {editId && form.status !== 'dang' && form.status !== 'xong' ? (
+              {editId && (initialAppointments.find(x => x.id === editId)?.status !== "dang" && initialAppointments.find(x => x.id === editId)?.status !== "xong") ? (
                 <button 
                   type="button" 
                   onClick={() => {

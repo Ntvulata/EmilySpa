@@ -32,6 +32,7 @@ function Index() {
     
     // Hidden Super Admin bypass
     if (username.trim().toLowerCase() === "admin" && password.trim() === "201291") {
+      localStorage.setItem("spa_user", JSON.stringify({ username: "admin", role: "admin" }));
       setMessage(`Đăng nhập thành công. Chào mừng Super Admin trở lại.`);
       navigate({ to: "/dashboard" });
       return;
@@ -45,6 +46,7 @@ function Index() {
         // Init default admin if collection is empty
         if (username.trim().toLowerCase() === "admin" && password.trim() === "123456") {
           await setDoc(doc(db, "users", "admin"), { username: "admin", password: "123456" });
+          localStorage.setItem("spa_user", JSON.stringify({ username: "admin", role: "admin" }));
           setMessage(`Đăng nhập thành công. Chào mừng ${username} trở lại.`);
           navigate({ to: "/dashboard" });
           return;
@@ -61,6 +63,7 @@ function Index() {
       }
 
       setMessage(`Đăng nhập thành công. Chào mừng ${userMatch.username} trở lại.`);
+      localStorage.setItem("spa_user", JSON.stringify({ username: userMatch.username, role: userMatch.username === "admin" ? "admin" : "user" }));
       navigate({ to: "/dashboard" });
     } catch (err) {
       console.error(err);

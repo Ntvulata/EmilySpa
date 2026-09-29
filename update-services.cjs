@@ -1,54 +1,50 @@
 ﻿const fs = require('fs');
 let code = fs.readFileSync('src/routes/dashboard.services.tsx', 'utf8');
 
-// Update emptyService
+if (!code.includes('const isAdmin =')) {
+  code = code.replace(
+    '  function ServicesPage() {',
+    '  function ServicesPage() {\n    const userStr = typeof window !== "undefined" ? localStorage.getItem("spa_user") : "{}";\n    const user = JSON.parse(userStr || "{}");\n    const isAdmin = user.role === "admin";'
+  );
+}
+
+// In the Services tab:
+// Edit button: onClick={() => editService(i)}
 code = code.replace(
-  /const emptyService = \{ id: "", name: "", duration: "60", price: "" \};/g,
-  'const emptyService = { id: "", name: "", duration: "60", price: "", commission: "" };'
+  /<button type="button" onClick=\{\(\) => editService\(i\)\} className=\{editBtn\}>[^<]*<Pencil[^>]*>[^<]*<\/button>/g,
+  '{isAdmin && <button type="button" onClick={() => editService(i)} className={editBtn}><Pencil className="size-3" /> Sửa</button>}'
 );
 
-// Update setForm in editService
+// Delete button: onClick={() => deleteService(i)}
 code = code.replace(
-  /setForm\(\{ id: s\.id, name: s\.name, duration: s\.duration\.replace\(\/\\D\/g, ""\), price: s\.price \? Number\(s\.price\)\.toLocaleString\("en-US"\) : "" \}\);/g,
-  'setForm({ id: s.id, name: s.name, duration: s.duration.replace(/\\D/g, ""), price: s.price ? Number(s.price).toLocaleString("en-US") : "", commission: s.commission ? Number(s.commission).toLocaleString("en-US") : "0" });'
+  /<button type="button" onClick=\{\(\) => deleteService\(i\)\} className="[^"]*hover:border-red-400[^"]*">[^<]*<Trash2[^>]*>[^<]*<\/button>/g,
+  '{isAdmin && <button type="button" onClick={() => deleteService(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500"><Trash2 className="size-3" /> Xóa</button>}'
 );
 
-// Update submit (add commission variable)
+// In the Packages tab:
+// Edit button: onClick={() => editPkg(i)}
 code = code.replace(
-  /const price = Number\(form\.price\.replace\(\/\\D\/g, ""\)\);/,
-  'const price = Number(form.price.replace(/\\D/g, ""));\n    const commission = Number(form.commission.replace(/\\D/g, ""));'
+  /<button type="button" onClick=\{\(\) => editPkg\(i\)\} className=\{editBtn\}>[^<]*<Pencil[^>]*>[^<]*<\/button>/g,
+  '{isAdmin && <button type="button" onClick={() => editPkg(i)} className={editBtn}><Pencil className="size-3" /> Sửa</button>}'
+);
+
+// Delete button: onClick={() => deletePkg(i)}
+code = code.replace(
+  /<button type="button" onClick=\{\(\) => deletePkg\(i\)\} className="[^"]*hover:border-red-400[^"]*">[^<]*<Trash2[^>]*>[^<]*<\/button>/g,
+  '{isAdmin && <button type="button" onClick={() => deletePkg(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500"><Trash2 className="size-3" /> Xóa</button>}'
+);
+
+// Also the "editStaff" and "deleteStaff" just in case they meant everything
+code = code.replace(
+  /<button type="button" onClick=\{\(\) => editStaff\(i\)\} className=\{editBtn\}>[^<]*<Pencil[^>]*>[^<]*<\/button>/g,
+  '{isAdmin && <button type="button" onClick={() => editStaff(i)} className={editBtn}><Pencil className="size-3" /> Sửa</button>}'
 );
 
 code = code.replace(
-  /const item = \{ id: form\.id \|\| \("SRV_" \+ Date\.now\(\)\), name, duration: \`\$\{minutes\} phút\`, price \};/,
-  'const item = { id: form.id || ("SRV_" + Date.now()), name, duration: `${minutes} phút`, price, commission };'
+  /<button type="button" onClick=\{\(\) => deleteStaff\(i\)\} className="[^"]*hover:border-red-400[^"]*">[^<]*<Trash2[^>]*>[^<]*<\/button>/g,
+  '{isAdmin && <button type="button" onClick={() => deleteStaff(i)} className="inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500"><Trash2 className="size-3" /> Xóa</button>}'
 );
 
-// Update table header
-code = code.replace(
-  /<th className="px-4 py-3 text-right">Giá \(VNĐ\)<\/th>/,
-  '<th className="px-4 py-3 text-right">Giá (VNĐ)</th>\n                  <th className="px-4 py-3 text-right">Hoa hồng KTV</th>'
-);
-
-// Update table row
-code = code.replace(
-  /<td className="px-4 py-3\.5 text-right font-medium text-ink">\{formatVnd\(item\.price\)\}<\/td>/,
-  '<td className="px-4 py-3.5 text-right font-medium text-ink">{formatVnd(item.price)}</td>\n                  <td className="px-4 py-3.5 text-right font-medium text-emerald">{formatVnd(item.commission || 0)}</td>'
-);
-
-// Update Form fields
-code = code.replace(
-  /<label className="block space-y-1\.5 text-xs font-semibold text-ink\/60">\s*Thời lượng \(phút\)/,
-  `<label className="block space-y-1.5 text-xs font-semibold text-ink/60">
-                Hoa hồng KTV (VNĐ)
-                <input className={inputClass} value={form.commission} onChange={update("commission")} inputMode="numeric" placeholder="VD: 50,000" />
-              </label>\n              <label className="block space-y-1.5 text-xs font-semibold text-ink/60">\n                Thời lượng (phút)`
-);
-
-// Fix quick-add service logic
-code = code.replace(
-  /const form = \{ id: "SRV_" \+ Date\.now\(\) \+ Math\.random\(\)\.toString\(36\)\.substr\(2, 5\), name: row\[0\]\.trim\(\), duration: row\[1\]\.trim\(\), price \};/g,
-  `const form = { id: "SRV_" + Date.now() + Math.random().toString(36).substr(2, 5), name: row[0].trim(), duration: row[1].trim(), price, commission: 0 };`
-);
 
 fs.writeFileSync('src/routes/dashboard.services.tsx', code, 'utf8');
+console.log("Applied RBAC to dashboard.services.tsx");

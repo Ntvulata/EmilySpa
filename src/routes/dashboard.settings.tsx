@@ -22,6 +22,9 @@ function SettingsPage() {
   const [spaAddress, setSpaAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
+  const userStr = typeof window !== "undefined" ? localStorage.getItem("spa_user") : "{}";
+  let isAdmin = false;
+  try { isAdmin = JSON.parse(userStr || "{}")?.role === "admin"; } catch(e) {}
 
   const [users, setUsers] = useState<any[]>([]);
   const [newUsername, setNewUsername] = useState("");
@@ -157,7 +160,8 @@ function SettingsPage() {
           )}
         </section>
 
-        <section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6">
+        {isAdmin && (
+<section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6">
           <h2 className="font-display text-2xl text-ink mb-4">Tài khoản hệ thống</h2>
           <div className="space-y-4">
             <div className="flex gap-2">
@@ -195,6 +199,7 @@ function SettingsPage() {
             </div>
           </div>
         </section>
+)}
       </div>
 
       <section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6">
