@@ -2,7 +2,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-import { formatVnd, initialCustomers, masterPackages, type Customer, type CustomerPackage, getRemainingPackageValue, packageHistory } from "@/lib/spa-data";
+import { formatVnd, initialCustomers, masterPackages, type Customer, type CustomerPackage, getRemainingPackageValue, packageHistory, appointments } from "@/lib/spa-data";
 import { fbSaveCustomer, fbDeleteCustomer } from "@/lib/firebase";
 
 export const Route = createFileRoute("/dashboard/customers")({
@@ -65,9 +65,7 @@ function CustomersPage() {
 
     // Save to Firebase
     try {
-      if (oldPhone && oldPhone !== newCustomer.phone) {
-        await fbDeleteCustomer(oldPhone);
-      }
+      
       await fbSaveCustomer(newCustomer);
     } catch (err) {
       console.error(err);
@@ -79,13 +77,21 @@ function CustomersPage() {
   };
 
   const deleteCustomer = async (idx: number) => {
+    const custToDelete = customers[idx];
+    const hasAppointments = appointments.some(a => a.customerId === custToDelete.id || a.phone === custToDelete.phone);
+    const hasPackages = packageHistory.some(h => h.customerId === custToDelete.id) || (custToDelete.packages && custToDelete.packages.length > 0);
+    
+    if (hasAppointments || hasPackages) {
+      alert("Không thể xóa Khách hàng này vì đã có phát sinh Lịch hẹn hoặc Mua gói thẻ trên hệ thống!");
+      return;
+    }
     if (window.confirm("Xóa khách hàng này?")) {
       const custToDelete = customers[idx];
       setCustomers((l) => l.filter((_, i) => i !== idx));
       setNotice("Đã xóa khách hàng.");
       
       try {
-        await fbDeleteCustomer(custToDelete.phone);
+        await fbDeleteCustomer(custToDelete.id);
       } catch (err) {
         console.error(err);
       }

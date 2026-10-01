@@ -82,6 +82,7 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
 function PackagesHistoryPage() {
   const { action } = Route.useSearch();
   const [filter, setFilter] = useState<"all" | "sell" | "deduct">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(action === "new");
   const [editId, setEditId] = useState<string | null>(null);
   
@@ -106,7 +107,22 @@ function PackagesHistoryPage() {
     return p.type === 'sessions' ? `${value > 0 ? '+' : ''}${value} buổi` : `${value > 0 ? '+' : ''}${formatVnd(value)}`;
   };
 
-  const filteredRows = packageHistory.filter(h => filter === "all" || h.type === filter).sort((a, b) => b.id.localeCompare(a.id));
+  const filteredRows = packageHistory.filter(h => {
+    if (filter !== "all" && h.type !== filter) return false;
+    if (!searchQuery.trim()) return true;
+    
+    const q = searchQuery.toLowerCase().trim();
+    const customer = initialCustomers.find(c => c.id === h.customerId);
+    const cName = customer?.name?.toLowerCase() || "";
+    const cPhone = customer?.phone?.toLowerCase() || "";
+    const pName = masterPackages.find(p => p.id === h.packageId)?.name?.toLowerCase() || h.packageId.toLowerCase();
+    
+    return h.id.toLowerCase().includes(q) || 
+           cName.includes(q) || 
+           cPhone.includes(q) || 
+           pName.includes(q) || 
+           (h.note && h.note.toLowerCase().includes(q));
+  }).sort((a, b) => b.id.localeCompare(a.id));
   const ITEMS_PER_PAGE = 50;
   const totalPages = Math.ceil(filteredRows.length / ITEMS_PER_PAGE) || 1;
   const rows = filteredRows.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -509,13 +525,24 @@ function PackagesHistoryPage() {
       )}
 
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex gap-2">
         <button onClick={() => { setFilter("all"); setPage(1); }} className={`px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] rounded-[3px] border transition ${filter === "all" ? "bg-emerald/10 border-emerald text-emerald" : "border-ink/15 text-ink/60 hover:text-emerald"}`}>Tất cả</button>
         <button onClick={() => { setFilter("sell"); setPage(1); }} className={`px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] rounded-[3px] border transition ${filter === "sell" ? "bg-emerald/10 border-emerald text-emerald" : "border-ink/15 text-ink/60 hover:text-emerald"}`}>Lịch sử bán</button>
         <button onClick={() => { setFilter("deduct"); setPage(1); }} className={`px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] rounded-[3px] border transition ${filter === "deduct" ? "bg-emerald/10 border-emerald text-emerald" : "border-ink/15 text-ink/60 hover:text-emerald"}`}>Lịch sử trừ</button>
+        </div>
+        <div className="relative w-full sm:max-w-sm">
+          <input 
+            type="text" 
+            placeholder="Tìm theo mã, tên khách, SĐT, ghi chú..." 
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            className="w-full rounded-[3px] border border-ink/15 bg-ivory px-3 py-2 text-sm text-ink outline-none transition focus:border-emerald"
+          />
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-[3px] border border-ink/10 bg-ivory-deep/30">
+        <div className="overflow-x-auto rounded-[3px] border border-ink/10 bg-ivory-deep/30">
         <table className="w-full min-w-[900px] border-collapse text-left">
           <thead>
             <tr className="border-b border-ink/10 text-[10px] uppercase tracking-[0.16em] text-ink/50">
