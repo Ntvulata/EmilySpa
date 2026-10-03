@@ -12,13 +12,13 @@ import {
 import { appointments, initialCustomers, packageHistory, serviceOptions, therapists, masterPackages, Customer, Appointment, PackageHistoryRecord } from "./spa-data";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBwhkFNT3TALvvhVL6jerA70XiTeqwBjEw",
-  authDomain: "emily-spa.firebaseapp.com",
-  projectId: "emily-spa",
-  storageBucket: "emily-spa.firebasestorage.app",
-  messagingSenderId: "496385289916",
-  appId: "1:496385289916:web:726d968e129906c465aab9",
-  measurementId: "G-Q96ZWHK0WW"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
