@@ -2,19 +2,12 @@
 let code = fs.readFileSync('src/routes/dashboard.appointments.tsx', 'utf8');
 
 const anchor = 'const isNewlyCompleted = oldAppt.status !== "xong" && form.status === "xong";';
+const endAnchor = 'const idx = initialAppointments.findIndex(x => x.id === editId);';
 const idx = code.indexOf(anchor);
+const endIdx = code.indexOf(endAnchor, idx);
 
-if (idx !== -1) {
-    const endAnchor = '});\n          }';
-    let endIdx = code.indexOf(endAnchor, idx);
-    
-    // Fallback if endAnchor is slightly different
-    if (endIdx === -1) {
-       endIdx = code.indexOf('});\r\n          }', idx);
-    }
-    
-    if (endIdx !== -1) {
-        const replacement = `const isNewlyCompleted = oldAppt.status !== "xong" && form.status === "xong";
+if (idx !== -1 && endIdx !== -1) {
+    const replacement = `const isNewlyCompleted = oldAppt.status !== "xong" && form.status === "xong";
           const isEditingCompleted = oldAppt.status === "xong" && form.status === "xong";
 
           if (isEditingCompleted) {
@@ -35,15 +28,14 @@ if (idx !== -1) {
                 pkg.type === "balance" ? dedVal : 0
               );
             });
-          }`;
+          }
           
-        code = code.substring(0, idx) + replacement + code.substring(endIdx + endAnchor.length);
-        fs.writeFileSync('src/routes/dashboard.appointments.tsx', code, 'utf8');
-        console.log("SUCCESSFULLY PATCHED ISNEWLYCOMPLETED");
-    } else {
-        console.log("COULD NOT FIND END ANCHOR");
-    }
+          `;
+          
+    code = code.substring(0, idx) + replacement + code.substring(endIdx);
+    fs.writeFileSync('src/routes/dashboard.appointments.tsx', code, 'utf8');
+    console.log("SUCCESSFULLY PATCHED ISNEWLYCOMPLETED");
 } else {
-    console.log("COULD NOT FIND ANCHOR");
+    console.log("COULD NOT FIND ANCHORS");
 }
 

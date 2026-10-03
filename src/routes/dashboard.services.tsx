@@ -3,7 +3,7 @@ import { Pencil, Trash2, CreditCard } from "lucide-react";
 import { useState, useEffect, type FormEvent } from "react";
 
 import { formatVnd, therapists, serviceOptions, masterPackages } from "@/lib/spa-data";
-import { fbSaveService, fbDeleteService, fbSaveTherapist, fbDeleteTherapist, fbSaveMasterPackage, fbDeleteMasterPackage, fbGetTherapists } from "@/lib/firebase";
+import { fbSaveService, fbDeleteService, fbSaveTherapist, fbDeleteTherapist, fbSaveMasterPackage, fbDeleteMasterPackage, fbGetTherapists, fbGetServices } from "@/lib/firebase";
 
 export const Route = createFileRoute("/dashboard/services")({
   head: () => ({
@@ -192,6 +192,14 @@ function ServicesPage() {
         setStaff(data);
       }
     }).catch(console.error);
+    fbGetServices().then(data => {
+      if (data && data.length > 0) {
+        setServices(data);
+        serviceOptions.length = 0;
+        data.forEach(d => serviceOptions.push(d));
+      }
+    }).catch(console.error);
+
   }, []);
   const [staffOpen, setStaffOpen] = useState(false);
   const [staffIdx, setStaffIdx] = useState<number | null>(null);

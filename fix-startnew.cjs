@@ -1,7 +1,31 @@
 ﻿const fs = require('fs');
-let code = fs.readFileSync('src/routes/dashboard.appointments.tsx', 'utf8');
+let code = fs.readFileSync('src/routes/dashboard.packages-history.tsx', 'utf8');
 
-code = code.replace(/masterTherapists\[0\]\.id/g, 'masterTherapists[0].id || masterTherapists[0].name');
+const oldStartNew = `  const startNew = () => {
+    setConvertOpen(false);
+    setForm({ 
+      date: new Date().toISOString().split("T")[0], 
+      customerId: "", 
+      packageId: "", 
+      valueChange: "", 
+      pricePaid: "",
+      note: "" 
+    });`;
 
-fs.writeFileSync('src/routes/dashboard.appointments.tsx', code, 'utf8');
-console.log("Fixed startNew therapistId");
+const newStartNew = `  const startNew = () => {
+    setConvertOpen(false);
+    setSellMode("master");
+    setForm({ 
+      date: new Date().toISOString().split("T")[0], 
+      customerId: "", 
+      packageId: "", 
+      serviceId: "",
+      valueChange: "", 
+      pricePaid: "",
+      note: "" 
+    });`;
+
+code = code.replace(oldStartNew, newStartNew);
+
+fs.writeFileSync('src/routes/dashboard.packages-history.tsx', code, 'utf8');
+console.log("Fixed startNew!");

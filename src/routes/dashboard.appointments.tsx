@@ -2,7 +2,7 @@
 import { useState, useMemo, type FormEvent, useEffect, useRef } from "react";
 import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera } from "lucide-react";
 import { formatVnd, appointments as initialAppointments, initialCustomers, serviceOptions, masterPackages, type Appointment, type AppointmentStatus, getRemainingPackageValue, packageHistory, therapists as masterTherapists } from "@/lib/spa-data";
-import { fbSaveAppointment, fbSaveAppointmentAndHistory, fbDeleteAppointment, fbGetTherapists } from "@/lib/firebase";
+import { fbSaveAppointment, fbSaveAppointmentAndHistory, fbDeleteAppointment, fbGetTherapists, fbGetServices } from "@/lib/firebase";
 
 export const Route = createFileRoute("/dashboard/appointments")({
   head: () => ({
@@ -113,7 +113,7 @@ function calculateEndTime(startTime: string, services: string[], serviceOptions:
   services.forEach(id => {
     const s = serviceOptions.find(opt => opt.id === id);
     if (s && s.duration) {
-      const parsed = parseInt(s.duration.replace(/\D/g, ""));
+      const parsed = typeof s.duration === 'string' ? parseInt(s.duration.replace(/\D/g, "")) : parseInt(String(s.duration || 0).replace(/\D/g, ""));
       if (!isNaN(parsed)) totalMinutes += parsed;
     }
   });
@@ -199,6 +199,14 @@ function AppointmentsPage() {
         setDbTherapists(masterTherapists);
       }
     }).catch(console.error);
+    fbGetServices().then(data => {
+      if (data && data.length > 0) {
+        serviceOptions.length = 0; // Clear the hardcoded options
+        data.forEach(d => serviceOptions.push(d));
+        setTick(t => t + 1); // Trigger re-render
+      }
+    }).catch(console.error);
+
   }, []);
 
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
@@ -251,7 +259,8 @@ function AppointmentsPage() {
     therapistId: dbTherapists[0]?.id || dbTherapists[0]?.name || "",
     status: "cho",
     packageUsed: "",
-        price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
+      packagesDeducted: [],
+      price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
         sessionsDeducted: "1",
     balanceDeducted: "",
         note: ""
@@ -315,18 +324,28 @@ function AppointmentsPage() {
     const c = initialCustomers.find(x => x.id === form.customerId);
     if (c) c.activePackages.forEach(p => pkgIds.add(p.packageId));
 
-    const active: { id: string, name: string, type: 'sessions' | 'balance', remaining: number }[] = [];
+        const active: { id: string, name: string, type: 'sessions' | 'balance', remaining: number }[] = [];
     pkgIds.forEach(id => {
+      const hasSell = packageHistory.some(h => h.customerId === form.customerId && h.packageId === id && h.type === "sell");
+      const validSells = packageHistory.filter(h => h.customerId === form.customerId && h.packageId === id && h.type === "sell" && h.date <= form.date);
+      
+      // Khách mua gói thẻ SAU ngày lịch hẹn này, nên không thể dùng để trừ cho lịch này
+      if (hasSell && validSells.length === 0) return;
+
       const rem = getRemainingPackageValue(form.customerId, id);
-      if (rem > 0) {
+      
+      if (rem > 0 || form.packagesDeducted.some(pd => pd.packageId === id) || form.packageUsed === id) {
         const master = masterPackages.find(m => m.id === id);
         if (master) {
           active.push({ id, name: master.name, type: master.type, remaining: rem });
+        } else if (id.startsWith("CUSTOM_")) {
+          const h = packageHistory.find(x => x.packageId === id && x.customName);
+          active.push({ id, name: h ? (h.customName || id) : id, type: "sessions", remaining: rem });
         }
       }
     });
     return active;
-  }, [form.customerId, appts]); // thêm appts vào dependency để update lại khi có thay đổi trừ thẻ
+  }, [form.customerId, form.date, form.packagesDeducted, form.packageUsed, appts]);
 
   const shiftDate = (days: number) => {
     const d = new Date(toDate);
@@ -346,7 +365,8 @@ function AppointmentsPage() {
       therapistId: dbTherapists[0]?.id || dbTherapists[0]?.name || "",
       status: "cho",
       packageUsed: "",
-        price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
+      packagesDeducted: [],
+      price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
         sessionsDeducted: "1",
       balanceDeducted: ""
     });
@@ -379,6 +399,7 @@ function AppointmentsPage() {
       therapistId: item.therapistId,
       status: item.status,
       packageUsed: item.packageUsed || "",
+      packagesDeducted: item.packagesDeducted ? item.packagesDeducted.map(p => ({...p, deducted: String(p.deducted)})) : (item.packageUsed ? [{ packageId: item.packageUsed, type: (item.balanceDeducted ? "balance" : "sessions") as "sessions"|"balance", deducted: item.balanceDeducted ? String(item.balanceDeducted) : String(item.sessionsDeducted || 1) }] : []),
       price: item.price ? Number(item.price).toLocaleString("en-US") : "",
       sessionsDeducted: item.sessionsDeducted ? String(item.sessionsDeducted) : "1",
       balanceDeducted: item.balanceDeducted ? Number(item.balanceDeducted).toLocaleString("en-US") : "",
@@ -413,14 +434,14 @@ function AppointmentsPage() {
     }
   };
 
-  const processPackageDeduction = (apptId: string, customerId: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number) => {
+  const processPackageDeduction = (apptId: string, apptDate: string, customerId: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number) => {
     const nextId = "HT-" + Date.now();
     const note = `Làm dịch vụ ${apptId}`;
     const valueChange = type === "sessions" ? -dedSessions : -dedBalance;
     
     const record: any = {
       id: nextId,
-      date: new Date().toISOString().split("T")[0],
+      date: apptDate,
       type: "deduct",
       customerId,
       packageId,
@@ -452,7 +473,7 @@ function AppointmentsPage() {
     }
 
     let updatedAppt: Appointment | null = null;
-    let newRecord: any = null;
+    let newRecords: any[] = [];
 
     const oldAppt = initialAppointments.find(x => x.id === id);
     if (oldAppt) {
@@ -461,14 +482,18 @@ function AppointmentsPage() {
       const isNewlyCompleted = oldStatus !== "xong" && newStatus === "xong";
       if (isNewlyCompleted && updatedAppt.packageUsed) {
         const t = getPackageType(updatedAppt.packageUsed);
-        newRecord = processPackageDeduction(
-          updatedAppt.id, 
-          updatedAppt.customerId, 
-          updatedAppt.packageUsed, 
-          t, 
-          updatedAppt.sessionsDeducted || 0, 
-          updatedAppt.balanceDeducted || 0
-        );
+        if (updatedAppt.packagesDeducted && updatedAppt.packagesDeducted.length > 0) {
+          newRecords = updatedAppt.packagesDeducted.map(pkg => 
+            processPackageDeduction(updatedAppt.id, updatedAppt.date, updatedAppt.customerId, pkg.packageId, pkg.type,
+              pkg.type === "sessions" ? pkg.deducted : 0,
+              pkg.type === "balance" ? pkg.deducted : 0)
+          );
+        } else if (updatedAppt.packageUsed) {
+          const t = getPackageType(updatedAppt.packageUsed);
+          newRecords = [processPackageDeduction(
+            updatedAppt.id, updatedAppt.date, updatedAppt.customerId, updatedAppt.packageUsed, t,
+            updatedAppt.sessionsDeducted || 0, updatedAppt.balanceDeducted || 0)];
+        }
       }
       
       const idx = initialAppointments.findIndex(x => x.id === id);
@@ -478,7 +503,7 @@ function AppointmentsPage() {
 
     if (updatedAppt) {
       try {
-        await fbSaveAppointmentAndHistory(updatedAppt, newRecord, null);
+        await fbSaveAppointmentAndHistory(updatedAppt, newRecords.length > 0 ? newRecords : null, null);
       } catch (err) {
         console.error("Lỗi khi lưu đổi trạng thái", err);
       }
@@ -517,28 +542,31 @@ function AppointmentsPage() {
       if (form.serviceIds.length === 0) { alert("Vui lòng chọn ít nhất 1 dịch vụ."); return; }
 
       const p = form.price ? Number(String(form.price).replace(/\D/g, "")) : 0;
-      const s = form.sessionsDeducted ? Number(String(form.sessionsDeducted).replace(/\D/g, "")) : 0;
-      const b = form.balanceDeducted ? Number(String(form.balanceDeducted).replace(/\D/g, "")) : 0;
-      const t = getPackageType(form.packageUsed);
-
-      if (form.packageUsed) {
-        let rem = getRemainingPackageValue(form.customerId, form.packageUsed);
-        if (editId) {
-          const oldAppt = initialAppointments.find(x => x.id === editId);
-          if (oldAppt && oldAppt.status === "xong" && oldAppt.packageUsed === form.packageUsed) {
-            if (t === "sessions") rem += (oldAppt.sessionsDeducted || 0);
-            if (t === "balance") rem += (oldAppt.balanceDeducted || 0);
+      
+      // Multi-package validation
+      if (form.status === "xong" && form.packagesDeducted.length > 0) {
+        for (const pkg of form.packagesDeducted) {
+          const dedVal = Number(String(pkg.deducted).replace(/\D/g, "")) || 0;
+          if (dedVal <= 0) { alert("Vui lòng nhập số lượng trừ cho gói thẻ."); return; }
+          let rem = getRemainingPackageValue(form.customerId, pkg.packageId);
+          if (editId) {
+            const oldAppt = initialAppointments.find(x => x.id === editId);
+            if (oldAppt?.status === "xong" && oldAppt.packagesDeducted) {
+              const oldPkg = oldAppt.packagesDeducted.find(op => op.packageId === pkg.packageId);
+              if (oldPkg) rem += oldPkg.deducted;
+            } else if (oldAppt?.status === "xong" && oldAppt.packageUsed === pkg.packageId) {
+              if (pkg.type === "sessions") rem += (oldAppt.sessionsDeducted || 0);
+              if (pkg.type === "balance") rem += (oldAppt.balanceDeducted || 0);
+            }
           }
-        }
-        if (form.status === "xong") {
-          if (t === "sessions" && s > rem) { alert(`Thẻ này chỉ còn ${rem} buổi, không đủ để trừ ${s} buổi.`); return; }
-          if (t === "balance" && b > rem) { alert(`Thẻ này chỉ còn ${formatVnd(rem)}, không đủ để trừ ${formatVnd(b)}.`); return; }
+          if (pkg.type === "sessions" && dedVal > rem) { alert(`Gói "${customerPackages.find(c=>c.id===pkg.packageId)?.name}" chỉ còn ${rem} buổi, không đủ để trừ ${dedVal} buổi.`); return; }
+          if (pkg.type === "balance" && dedVal > rem) { alert(`Gói "${customerPackages.find(c=>c.id===pkg.packageId)?.name}" chỉ còn ${formatVnd(rem)}, không đủ để trừ ${formatVnd(dedVal)}.`); return; }
         }
       }
 
       let savedAppt: Appointment;
-      let newHistoryRecord: any = null;
-      let deletedHistoryId: string | null = null;
+      let newHistoryRecords: any[] = [];
+      let deletedHistoryIds: string[] = [];
 
       if (editId) {
         const oldAppt = initialAppointments.find(x => x.id === editId);
@@ -549,51 +577,55 @@ function AppointmentsPage() {
             return;
           }
           const isRevertingCompleted = oldAppt?.status === "xong" && form.status !== "xong";
-        const isChangingDeduction = oldAppt?.status === "xong" && form.status === "xong" && oldAppt?.packageUsed && (
-            oldAppt.packageUsed !== form.packageUsed || 
-            oldAppt.sessionsDeducted !== s || 
-            oldAppt.balanceDeducted !== b
-        );
-  
-        if ((isRevertingCompleted || isChangingDeduction) && oldAppt?.packageUsed) {
-          if (isRevertingCompleted) {
-            if (!window.confirm(`Bạn có muốn HOÀN LẠI số dư/buổi cho khách không?\nTrạng thái đổi từ 'Hoàn thành' sang '${form.status}'`)) {
-              return; // Abort save if user clicks Cancel
-            }
+        
+        // Hoàn lại tất cả các gói thẻ nếu đang revert từ Hoàn thành
+        if (isRevertingCompleted && (oldAppt.packagesDeducted?.length || oldAppt.packageUsed)) {
+          if (!window.confirm(`Bạn có muốn HOÀN LẠI số dư/buổi cho khách không?\nTrạng thái đổi từ 'Hoàn thành' sang '${form.status}'`)) {
+            return;
           }
           const toDelete = packageHistory.filter(h => h.appointmentId === editId && h.type === "deduct");
-          if (toDelete.length > 0) {
-            deletedHistoryId = toDelete[0].id;
-            toDelete.forEach(r => {
-              const idx = packageHistory.findIndex(h => h.id === r.id);
-              if (idx !== -1) packageHistory.splice(idx, 1);
-            });
-          }
+          toDelete.forEach(r => {
+            deletedHistoryIds.push(r.id);
+            const idx = packageHistory.findIndex(h => h.id === r.id);
+            if (idx !== -1) packageHistory.splice(idx, 1);
+          });
         }
-  
+
         savedAppt = {
             ...oldAppt,
             ...form,
             endTime: finalEndTime,
             price: p,
-            sessionsDeducted: s,
-            balanceDeducted: b,
+            packagesDeducted: form.packagesDeducted.map(p => ({...p, deducted: Number(String(p.deducted).replace(/\D/g, "")) || 0})),
+            sessionsDeducted: 0,
+            balanceDeducted: 0,
             note: form.note ? String(form.note).trim() : ""
         };
 
         const isNewlyCompleted = oldAppt.status !== "xong" && form.status === "xong";
-        if ((isNewlyCompleted || isChangingDeduction) && form.packageUsed) {
-            newHistoryRecord = processPackageDeduction(
-              savedAppt.id, 
-              savedAppt.customerId, 
-              form.packageUsed, 
-              t as any, 
-              savedAppt.sessionsDeducted || 0, 
-              savedAppt.balanceDeducted || 0
-            );
-        }
+          const isEditingCompleted = oldAppt.status === "xong" && form.status === "xong";
 
-        const idx = initialAppointments.findIndex(x => x.id === editId);
+          if (isEditingCompleted) {
+            const toDelete = packageHistory.filter(h => h.appointmentId === editId && h.type === "deduct");
+            toDelete.forEach(r => {
+              deletedHistoryIds.push(r.id);
+              const idx = packageHistory.findIndex(h => h.id === r.id);
+              if (idx !== -1) packageHistory.splice(idx, 1);
+            });
+          }
+
+          if ((isNewlyCompleted || isEditingCompleted) && form.packagesDeducted.length > 0) {
+            newHistoryRecords = form.packagesDeducted.map(pkg => {
+              const dedVal = Number(String(pkg.deducted).replace(/\D/g, "")) || 0;
+              return processPackageDeduction(
+                savedAppt.id, savedAppt.date, savedAppt.customerId, pkg.packageId, pkg.type, 
+                pkg.type === "sessions" ? dedVal : 0, 
+                pkg.type === "balance" ? dedVal : 0
+              );
+            });
+          }
+          
+          const idx = initialAppointments.findIndex(x => x.id === editId);
         if (idx !== -1) initialAppointments[idx] = savedAppt;
         setAppts([...initialAppointments]);
         setNotice("Đã cập nhật lịch hẹn.");
@@ -610,20 +642,21 @@ function AppointmentsPage() {
           status: form.status,
           packageUsed: form.packageUsed,
           price: p,
-          sessionsDeducted: s,
-          balanceDeducted: b,
-          note: form.note ? String(form.note).trim() : ""
+          packagesDeducted: form.packagesDeducted.map(p => ({...p, deducted: Number(String(p.deducted).replace(/\D/g, "")) || 0})),
+            sessionsDeducted: 0,
+            balanceDeducted: 0,
+            note: form.note ? String(form.note).trim() : ""
         };
 
-        if (form.status === "xong" && form.packageUsed) {
-          newHistoryRecord = processPackageDeduction(
-            savedAppt.id, 
-            savedAppt.customerId, 
-            form.packageUsed, 
-            t as any, 
-            savedAppt.sessionsDeducted || 0, 
-            savedAppt.balanceDeducted || 0
-          );
+        if (form.status === "xong" && form.packagesDeducted.length > 0) {
+          newHistoryRecords = form.packagesDeducted.map(pkg => {
+            const dedVal = Number(String(pkg.deducted).replace(/\D/g, "")) || 0;
+            return processPackageDeduction(
+              savedAppt.id, savedAppt.date, savedAppt.customerId, pkg.packageId, pkg.type,
+              pkg.type === "sessions" ? dedVal : 0,
+              pkg.type === "balance" ? dedVal : 0
+            );
+          });
         }
 
         initialAppointments.push(savedAppt);
@@ -632,7 +665,7 @@ function AppointmentsPage() {
       }
 
       try {
-        await fbSaveAppointmentAndHistory(savedAppt, newHistoryRecord, deletedHistoryId);
+        await fbSaveAppointmentAndHistory(savedAppt, newHistoryRecords.length > 0 ? newHistoryRecords : null, deletedHistoryIds.length > 0 ? deletedHistoryIds : null);
       } catch (err: any) {
         alert("Lỗi lưu Cloud: " + err.message);
         console.error(err);
@@ -694,40 +727,14 @@ function AppointmentsPage() {
                   value={form.customerId}
                   onChange={(v) => { 
                     const total = calculateTotalPrice(form.serviceIds, serviceOptions);
-                    setForm({ ...form, customerId: v, packageUsed: "", price: total > 0 ? total.toLocaleString("en-US") : "" }); 
+                    setForm({ ...form, customerId: v, packageUsed: "", packagesDeducted: [], price: total > 0 ? total.toLocaleString("en-US") : "" }); 
                     setError(""); 
                   }}
                   placeholder="-- Chọn khách hàng --"
                 />
               </div>
               
-              {customerPackages.length > 0 && (
-                <div className="col-span-1 space-y-1.5 p-2.5 rounded-[3px] border border-champagne/40 bg-champagne/10">
-                  <label className="text-[11px] font-bold uppercase tracking-wide text-ink/50 flex items-center gap-2">
-                    <span>Dùng Gói/Thẻ</span>
-                  </label>
-                  <select 
-                    className={inputClass}
-                    value={form.packageUsed}
-                    onChange={e => {
-                      const newPkg = e.target.value;
-                      let newPrice = form.price;
-                      if (!newPkg) {
-                        const total = calculateTotalPrice(form.serviceIds, serviceOptions);
-                        newPrice = total > 0 ? total.toLocaleString("en-US") : "";
-                      }
-                      setForm({...form, packageUsed: newPkg, price: newPrice});
-                    }}
-                  >
-                    <option value="">-- Không dùng --</option>
-                    {customerPackages.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} - Còn {p.type === "balance" ? formatVnd(p.remaining) : `${p.remaining} buổi`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
@@ -796,33 +803,87 @@ function AppointmentsPage() {
               </select>
             </label>
 
-            <div className="sm:col-span-2 rounded-lg border border-emerald/20 bg-gradient-to-r from-emerald/[0.04] to-transparent mt-2 p-4">
+            <div className="sm:col-span-2 rounded-[6px] border border-emerald/20 bg-emerald/[0.02] mt-2 p-4">
               <p className="text-sm font-bold mb-3 text-ink flex items-center gap-2">💳 Thanh toán & Trừ thẻ</p>
+              
+              {customerPackages.length > 0 && (
+                <div className="mb-4 space-y-2 border-b border-emerald/10 pb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Trừ vào gói thẻ</span>
+                    <select
+                      className="rounded-[3px] border border-ink/15 bg-ivory px-2 py-1.5 text-xs outline-none focus:border-emerald"
+                      value=""
+                      onChange={e => {
+                        const newPkg = e.target.value;
+                        if (!newPkg) return;
+                        if (form.packagesDeducted.some(p => p.packageId === newPkg)) return;
+                        const pkgDef = customerPackages.find(p => p.id === newPkg);
+                        if (!pkgDef) return;
+                        setForm({...form, packagesDeducted: [...form.packagesDeducted, { packageId: newPkg, type: pkgDef.type, deducted: pkgDef.type === "sessions" ? "1" : "" }]});
+                      }}
+                    >
+                      <option value="">+ Chọn gói thẻ để trừ...</option>
+                      {customerPackages.filter(p => !form.packagesDeducted.some(pd => pd.packageId === p.id)).map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} - Còn {p.type === "balance" ? formatVnd(p.remaining) : `${p.remaining} buổi`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {form.packagesDeducted.map((pkg, i) => {
+                    const pDef = customerPackages.find(p => p.id === pkg.packageId);
+                    if (!pDef) return null;
+                    return (
+                      <div key={pkg.packageId} className="flex flex-wrap items-end gap-3 rounded-[3px] bg-white p-3 shadow-sm ring-1 ring-ink/5 mt-2">
+                        <div className="flex-1 min-w-[120px]">
+                          <p className="text-xs font-semibold text-ink">{pDef.name}</p>
+                          <p className="text-[10px] text-ink/50 mt-0.5">Còn {pDef.type === "balance" ? formatVnd(pDef.remaining) : `${pDef.remaining} buổi`}</p>
+                        </div>
+                        <div className="w-32">
+                          <label className="text-[10px] uppercase text-ink/50 font-bold mb-1 block">
+                            {pDef.type === "balance" ? "Số tiền trừ" : "Số buổi trừ"}
+                          </label>
+                          <input 
+                            className={inputClass + " !py-1.5"} 
+                            value={pkg.deducted}
+                            onChange={e => {
+                              const raw = e.target.value.replace(/\D/g, "");
+                              const val = pDef.type === "balance" ? (raw ? Number(raw).toLocaleString("en-US") : "") : raw;
+                              const newArr = [...form.packagesDeducted];
+                              newArr[i] = {...newArr[i], deducted: val};
+                              setForm({...form, packagesDeducted: newArr});
+                            }}
+                            inputMode="numeric"
+                          />
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setForm({...form, packagesDeducted: form.packagesDeducted.filter((_, idx) => idx !== i)});
+                          }}
+                          className="text-ink/40 hover:text-red-500 p-1.5 transition"
+                          title="Bỏ gói thẻ này"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
               <div className="grid gap-4 sm:grid-cols-2">
-                {getPackageType(form.packageUsed) === 'sessions' && (
-                   <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
-                      Số buổi trừ vào thẻ
-                      <input className={inputClass} value={form.sessionsDeducted} onChange={e => setForm({...form, sessionsDeducted: e.target.value})} inputMode="numeric" />
-                   </label>
-                )}
-                {getPackageType(form.packageUsed) === 'balance' && (
-                   <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
-                      Số tiền trừ vào thẻ (VNĐ)
-                      <input className={inputClass} value={form.balanceDeducted} onChange={e => {
-                        const raw = e.target.value.replace(/\D/g, "");
-                        setForm({...form, balanceDeducted: raw ? Number(raw).toLocaleString("en-US") : ""});
-                      }} inputMode="numeric" />
-                   </label>
-                )}
                 <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
                    Số tiền thực thu (Thanh toán thêm/dịch vụ ngoài)
                    <input className={inputClass} value={form.price} onChange={e => {
                      const raw = e.target.value.replace(/\D/g, "");
                      setForm({...form, price: raw ? Number(raw).toLocaleString("en-US") : ""});
-                   }} inputMode="numeric" placeholder="VNĐ..." />
+                   }} inputMode="numeric" placeholder="VND..." />
                 </label>
               </div>
             </div>
+
 
           <label className="space-y-1.5 sm:col-span-2">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-ink/50">Ghi chú</span>

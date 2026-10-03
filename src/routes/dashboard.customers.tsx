@@ -227,8 +227,12 @@ function CustomersPage() {
   return (
                     <ul className="mb-4 space-y-2">
                       {formActivePackages.map(pkg => {
-                        const def = masterPackages.find(m => m.id === pkg.packageId);
-                        if (!def) return null;
+                        let def = masterPackages.find(m => m.id === pkg.packageId);
+                          if (!def && pkg.packageId.startsWith("CUSTOM_")) {
+                            const h = packageHistory.find(x => x.packageId === pkg.packageId && x.customName);
+                            def = { name: h ? (h.customName || pkg.packageId) : pkg.packageId, type: "sessions" } as any;
+                          }
+                          if (!def) return null;
   const ITEMS_PER_PAGE = 50;
   const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
@@ -293,8 +297,12 @@ function CustomersPage() {
                   ) : (
                     <ul className="space-y-1.5">
                       {validPackages.map(pkg => {
-                        const def = masterPackages.find(m => m.id === pkg.packageId);
-                        if (!def) return null;
+                        let def = masterPackages.find(m => m.id === pkg.packageId);
+                          if (!def && pkg.packageId.startsWith("CUSTOM_")) {
+                            const h = packageHistory.find(x => x.packageId === pkg.packageId && x.customName);
+                            def = { name: h ? (h.customName || pkg.packageId) : pkg.packageId, type: "sessions" } as any;
+                          }
+                          if (!def) return null;
   const ITEMS_PER_PAGE = 50;
   const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;

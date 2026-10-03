@@ -10,12 +10,15 @@ export type Appointment = {
   phone?: string; // Optional now, since customerId is used
   serviceIds: string[];
   therapistId: string;
-  packageUsed?: string; // Tên thẻ hoặc ID thẻ
+  packageUsed?: string; // Legacy - giữ lại để tương thích dữ liệu cũ
+  
+  // Trừ nhiều gói/thẻ cùng lúc
+  packagesDeducted?: { packageId: string; type: "sessions" | "balance"; deducted: number }[];
   
   // Các trường thanh toán
   price: number;
-  sessionsDeducted?: number;
-  balanceDeducted?: number;
+  sessionsDeducted?: number; // Legacy
+  balanceDeducted?: number; // Legacy
   
   status: AppointmentStatus;
 };
@@ -114,6 +117,7 @@ export type PackageHistoryRecord = {
   pricePaid?: number;
   note: string;
   appointmentId?: string;
+  customName?: string; // Tn gp cho thẻ d?ch v? t? do
 };
 
 export const packageHistory: PackageHistoryRecord[] = [

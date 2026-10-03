@@ -1,8 +1,8 @@
 import React from "react";
 ﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import { History, ShoppingCart, Scissors, Pencil, Trash2, ChevronDown, Check, ArrowRightLeft, Undo2 } from "lucide-react";
-import { formatVnd, packageHistory, masterPackages, initialCustomers } from "@/lib/spa-data";
-import { fbSavePackageHistory, fbDeletePackageHistory } from "@/lib/firebase";
+import { formatVnd, packageHistory, masterPackages, initialCustomers, serviceOptions } from "@/lib/spa-data";
+import { fbSavePackageHistory, fbDeletePackageHistory, fbGetServices } from "@/lib/firebase";
 import { useState, useRef, useEffect, type FormEvent } from "react";
 
 export const Route = createFileRoute("/dashboard/packages-history")({
@@ -80,6 +80,7 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
 }
 
 function PackagesHistoryPage() {
+  const [sellMode, setSellMode] = useState<"master" | "custom">("master");
   const { action } = Route.useSearch();
   const [filter, setFilter] = useState<"all" | "sell" | "deduct">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,6 +91,7 @@ function PackagesHistoryPage() {
     date: new Date().toISOString().split("T")[0],
     customerId: "",
     packageId: "",
+    serviceId: "",
     valueChange: "",
     pricePaid: "",
     note: ""
@@ -98,9 +100,22 @@ function PackagesHistoryPage() {
   const [notice, setNotice] = useState("");
 
   const [tick, setTick] = useState(0);
+  useEffect(() => {
+    fbGetServices().then(data => {
+      if (data && data.length > 0) {
+        serviceOptions.length = 0;
+        data.forEach(d => serviceOptions.push(d));
+      }
+    }).catch(console.error);
+  }, []);
   const [page, setPage] = useState(1);
 
-  const getPackageName = (id: string) => masterPackages.find(p => p.id === id)?.name || id;
+  const getPackageName = (id: string) => {
+    const m = masterPackages.find(p => p.id === id);
+    if (m) return m.name;
+    const h = packageHistory.find(x => x.packageId === id && x.customName);
+    return h ? h.customName : id;
+  };
   const getFormatValue = (pkgId: string, value: number) => {
     const p = masterPackages.find(x => x.id === pkgId);
     if (!p) return value;
@@ -115,7 +130,7 @@ function PackagesHistoryPage() {
     const customer = initialCustomers.find(c => c.id === h.customerId);
     const cName = customer?.name?.toLowerCase() || "";
     const cPhone = customer?.phone?.toLowerCase() || "";
-    const pName = masterPackages.find(p => p.id === h.packageId)?.name?.toLowerCase() || h.packageId.toLowerCase();
+    const pName = getPackageName(h.packageId).toLowerCase();
     
     return h.id.toLowerCase().includes(q) || 
            cName.includes(q) || 
@@ -157,9 +172,13 @@ function PackagesHistoryPage() {
       const remaining = val.total - val.used;
       if (remaining > 0) {
         const pDef = masterPackages.find(p => p.id === pId);
-        if (pDef) {
-          result.push({ pId, name: pDef.name, remaining, type: pDef.type });
-        }
+          if (pDef) {
+            result.push({ pId, name: pDef.name, remaining, type: pDef.type });
+          } else if (pId.startsWith("CUSTOM_")) {
+            // Find custom name from history
+            const h = packageHistory.find(x => x.packageId === pId && x.customName);
+            result.push({ pId, name: h ? h.customName : pId, remaining, type: "sessions" });
+          }
       }
     });
     return result;
@@ -252,10 +271,24 @@ function PackagesHistoryPage() {
     setConvertOpen(false);
     const item = packageHistory.find(x => x.id === id);
     if (!item || item.type !== "sell") return;
+    
+    const isCustom = item.packageId.startsWith("CUSTOM_");
+    setSellMode(isCustom ? "custom" : "master");
+    
+    let parsedServiceId = "";
+    if (isCustom) {
+      const withoutPrefix = item.packageId.replace("CUSTOM_", "");
+      const lastUnderscoreIdx = withoutPrefix.lastIndexOf("_");
+      if (lastUnderscoreIdx !== -1) {
+        parsedServiceId = withoutPrefix.substring(0, lastUnderscoreIdx);
+      }
+    }
+    
     setForm({
       date: item.date,
       customerId: item.customerId,
-      packageId: item.packageId,
+      packageId: isCustom ? "" : item.packageId,
+      serviceId: parsedServiceId,
       valueChange: item.valueChange ? Number(item.valueChange).toLocaleString("en-US") : "",
       pricePaid: item.pricePaid !== undefined ? Number(item.pricePaid).toLocaleString("en-US") : "",
       note: item.note
@@ -289,7 +322,8 @@ function PackagesHistoryPage() {
     e.preventDefault();
     if (!form.date) return setError("Vui lòng chọn ngày mua.");
     if (!form.customerId) return setError("Vui lòng chọn khách hàng.");
-    if (!form.packageId) return setError("Vui lòng chọn gói/thẻ.");
+    if (sellMode === "master" && !form.packageId) return setError("Vui lòng chọn gói/thẻ.");
+      if (sellMode === "custom" && !form.serviceId) return setError("Vui lòng chọn dịch vụ.");
     
     const val = Number(form.valueChange.replace(/\D/g, ""));
     if (!val) return setError("Vui lòng nhập giá trị thẻ hợp lệ.");
@@ -300,28 +334,52 @@ function PackagesHistoryPage() {
     let recordToSave;
 
     if (editId) {
-      const idx = packageHistory.findIndex(h => h.id === editId);
-      if (idx !== -1) {
-        recordToSave = {
-          ...packageHistory[idx],
-          date: form.date,
-          customerId: form.customerId,
-          packageId: form.packageId,
-          valueChange: val,
-          pricePaid: price,
-          note: form.note
-        };
-        packageHistory[idx] = recordToSave;
+        const idx = packageHistory.findIndex(h => h.id === editId);
+        if (idx !== -1) {
+          let finalPkgId = form.packageId;
+          let finalCustomName = packageHistory[idx].customName;
+          
+          if (sellMode === "custom") {
+             const oldIsCustom = packageHistory[idx].packageId.startsWith("CUSTOM_");
+             finalPkgId = oldIsCustom ? packageHistory[idx].packageId : "CUSTOM_" + form.serviceId + "_" + Date.now();
+             const svc = serviceOptions.find(s => s.id === form.serviceId);
+             finalCustomName = "Thẻ " + val + " buổi - " + (svc ? svc.name : form.serviceId);
+          } else {
+             finalCustomName = undefined;
+          }
+
+          recordToSave = {
+            ...packageHistory[idx],
+            date: form.date,
+            customerId: form.customerId,
+            packageId: finalPkgId,
+            customName: finalCustomName,
+            valueChange: val,
+            pricePaid: price,
+            note: form.note
+          };
+          packageHistory[idx] = recordToSave;
       }
       setNotice("Đã cập nhật lịch sử bán.");
     } else {
       const nextId = "HT-" + Date.now();
+      
+      let finalPkgId = form.packageId;
+      let finalCustomName = undefined;
+      
+      if (sellMode === "custom") {
+        finalPkgId = "CUSTOM_" + form.serviceId + "_" + Date.now();
+        const svc = serviceOptions.find(s => s.id === form.serviceId);
+        finalCustomName = "Thẻ " + val + " buổi - " + (svc ? svc.name : form.serviceId);
+      }
+
       recordToSave = {
         id: nextId,
         date: form.date,
         type: "sell" as const,
         customerId: form.customerId,
-        packageId: form.packageId,
+        packageId: finalPkgId,
+        customName: finalCustomName,
         valueChange: val,
         pricePaid: price,
         note: form.note || "Mua mới/Nạp thêm"
@@ -390,35 +448,73 @@ function PackagesHistoryPage() {
               />
             </div>
             
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-ink/60">Gói cần mua</label>
-              <SearchableSelect
-                options={packageOptions}
-                value={form.packageId}
-                onChange={(v) => {
-                  const master = masterPackages.find(p => p.id === v);
-                  setForm({ 
-                    ...form, 
-                    packageId: v, 
-                    valueChange: master ? Number(master.value).toLocaleString("en-US") : "",
-                    pricePaid: master ? Number(master.price).toLocaleString("en-US") : ""
-                  });
-                  setError("");
-                }}
-                placeholder="-- Chọn gói/thẻ --"
-              />
+            <div className="sm:col-span-2 flex items-center gap-4 mt-2 mb-2 p-1 bg-ink/5 rounded-md w-fit">
+              <button type="button" onClick={() => setSellMode("master")} className={`px-4 py-2 text-xs font-semibold rounded-md transition ${sellMode === "master" ? "bg-white shadow-sm text-emerald" : "text-ink/60"}`}>Mua Gói Combo</button>
+              <button type="button" onClick={() => setSellMode("custom")} className={`px-4 py-2 text-xs font-semibold rounded-md transition ${sellMode === "custom" ? "bg-white shadow-sm text-emerald" : "text-ink/60"}`}>Mua Dịch Vụ Tự Do</button>
             </div>
+            
+            {sellMode === "master" ? (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink/60">Gói cần mua</label>
+                <SearchableSelect
+                  options={packageOptions}
+                  value={form.packageId}
+                  onChange={(v) => {
+                    const master = masterPackages.find(p => p.id === v);
+                    setForm({ 
+                      ...form, 
+                      packageId: v, 
+                      valueChange: master ? Number(master.value).toLocaleString("en-US") : "",
+                      pricePaid: master ? Number(master.price).toLocaleString("en-US") : ""
+                    });
+                    setError("");
+                  }}
+                  placeholder="-- Chọn gói/thẻ --"
+                />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-ink/60">Dịch vụ</label>
+                <SearchableSelect
+                  options={serviceOptions.map(s => ({ value: s.id, label: `${s.name} - ${s.price ? Number(s.price).toLocaleString("en-US") + " VND" : "0 VND"}` }))}
+                  value={form.serviceId}
+                  onChange={(v) => {
+                    const svc = serviceOptions.find(s => s.id === v);
+                    setForm({ 
+                      ...form, 
+                      serviceId: v, 
+                      valueChange: "5", // Mặc định gợi ý 5 buổi
+                      pricePaid: svc ? Number(svc.price * 5).toLocaleString("en-US") : ""
+                    });
+                    setError("");
+                  }}
+                  placeholder="-- Chọn dịch vụ --"
+                />
+              </div>
+            )}
 
             <label className="space-y-1.5 text-xs font-semibold text-ink/60">
-              Giá trị cấp cho khách (Số buổi / Số tiền)
-              <input
-                className="w-full rounded-[3px] border border-ink/15 bg-ivory px-3 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-emerald"
-                value={form.valueChange}
-                onChange={(e) => { const raw = e.target.value.replace(/\D/g, ""); setForm({ ...form, valueChange: raw ? Number(raw).toLocaleString("en-US") : "" }); }}
-                inputMode="numeric"
-                placeholder="VD: 5"
-              />
-            </label>
+                {sellMode === "custom" ? "Số buổi (Lượt)" : "Giá trị cấp cho khách (Số buổi / Số tiền)"}
+                <input
+                  className="w-full rounded-[3px] border border-ink/15 bg-ivory px-3 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-emerald"
+                  value={form.valueChange}
+                  onChange={(e) => { 
+                    const raw = e.target.value.replace(/\D/g, ""); 
+                    let newPrice = form.pricePaid;
+                    if (sellMode === "custom" && raw) {
+                      const svc = serviceOptions.find(s => s.id === form.serviceId);
+                      if (svc) {
+                        newPrice = Number(svc.price * Number(raw)).toLocaleString("en-US");
+                      }
+                    } else if (sellMode === "custom" && !raw) {
+                      newPrice = "";
+                    }
+                    setForm({ ...form, valueChange: raw ? Number(raw).toLocaleString("en-US") : "", pricePaid: sellMode === "custom" ? newPrice : form.pricePaid }); 
+                  }}
+                  inputMode="numeric"
+                  placeholder="VD: 5"
+                />
+              </label>
 
             <label className="space-y-1.5 text-xs font-semibold text-ink/60">
               Số tiền thanh toán (VNĐ)
@@ -570,7 +666,7 @@ function PackagesHistoryPage() {
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-champagne bg-champagne/10 px-2 py-1 rounded-[2px]"><Scissors className="size-3" /> TRỪ THẺ</span>
                   )}
                 </td>
-                <td className="px-4 py-3.5 text-ink/75">{getPackageName(item.packageId)}</td>
+                <td className="px-4 py-3.5 text-ink/75">{item.customName || getPackageName(item.packageId)}</td>
                 <td className={`px-4 py-3.5 font-semibold text-right ${item.type === "sell" ? "text-emerald" : "text-champagne"}`}>{getFormatValue(item.packageId, item.valueChange)}</td>
                 <td className="px-4 py-3.5 font-semibold text-right text-ink/80">
                   {item.pricePaid !== undefined ? formatVnd(item.pricePaid) : "-"}

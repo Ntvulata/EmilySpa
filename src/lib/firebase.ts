@@ -95,15 +95,17 @@ export const fbDeletePackageHistory = async (id: string) => {
 
 // Helper for when completing an appointment deducts a package
 // We want to save both the appointment update AND the new deduction history record atomically
-export const fbSaveAppointmentAndHistory = async (appt: Appointment, record: PackageHistoryRecord | null, deletedRecordId: string | string[] | null) => {
+export const fbSaveAppointmentAndHistory = async (appt: Appointment, records: PackageHistoryRecord[] | null, deletedRecordId: string | string[] | null) => {
   const batch = writeBatch(db);
   
   const apptRef = doc(db, "appointments", appt.id);
   batch.set(apptRef, appt);
 
-  if (record) {
-    const recRef = doc(db, "packageHistory", record.id);
-    batch.set(recRef, record);
+  if (records && records.length > 0) {
+    for (const rec of records) {
+      const recRef = doc(db, "packageHistory", rec.id);
+      batch.set(recRef, rec);
+    }
   }
 
   if (deletedRecordId) {
@@ -160,6 +162,11 @@ export const fbSaveUser = async (user: any) => {
 };
 export const fbDeleteUser = async (username: string) => {
   await deleteDoc(doc(db, "users", username));
+};
+
+export const fbGetServices = async () => {
+  const snap = await getDocs(collection(db, "services"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
 export const fbGetTherapists = async () => {
