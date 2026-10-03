@@ -1,3 +1,9 @@
+export const spaSettings = {
+  spaName: "Emily Spa",
+  spaPhone: "",
+  spaAddress: ""
+};
+
 export type AppointmentStatus = "cho" | "dang" | "xong" | "huy";
 
 export type Appointment = {

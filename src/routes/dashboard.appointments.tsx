@@ -1,6 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, type FormEvent, useEffect, useRef } from "react";
-import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera } from "lucide-react";
+import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera, Printer } from "lucide-react";
+import { printReceipt } from "@/lib/print";
 import { formatVnd, appointments as initialAppointments, initialCustomers, serviceOptions, masterPackages, type Appointment, type AppointmentStatus, getRemainingPackageValue, packageHistory, therapists as masterTherapists } from "@/lib/spa-data";
 import { fbSaveAppointment, fbSaveAppointmentAndHistory, fbDeleteAppointment, fbGetTherapists, fbGetServices } from "@/lib/firebase";
 
@@ -126,6 +127,43 @@ function calculateEndTime(startTime: string, services: string[], serviceOptions:
 }
 
 function AppointmentsPage() {
+  const handlePrint = (item: Appointment) => {
+    try {
+      const customer = initialCustomers.find(c => c.id === item.customerId);
+      const svcs = item.serviceIds.map(id => {
+        const s = serviceOptions.find(x => x.id === id);
+        return s ? s.name : id;
+      });
+      
+      const deductions = (item.packagesDeducted || []).map(p => {
+        const pDef = masterPackages.find(x => x.id === p.packageId);
+        let name = pDef ? pDef.name : p.packageId;
+        if (!pDef && p.packageId.startsWith("CUSTOM_")) {
+           const h = packageHistory.find(x => x.packageId === p.packageId && x.customName);
+           if (h) name = h.customName;
+        }
+        return `-${p.deducted} ${p.type === 'sessions' ? 'buổi' : 'VNĐ'} (${name})`;
+      }).join(", ");
+      
+      printReceipt({
+        id: item.id,
+        date: item.date + " " + (item.time || ""),
+        customerName: customer?.name || "Khách lẻ",
+        customerPhone: customer?.phone || "",
+        items: [
+          {
+            name: "Dịch vụ: " + svcs.join(", "),
+            price: formatVnd(item.price || 0),
+            note: deductions ? "Trừ thẻ: " + deductions : ""
+          }
+        ],
+        total: formatVnd(item.price || 0)
+      });
+    } catch (e) {
+      alert("Lỗi in: " + e);
+    }
+  };
+
   const userStr = typeof window !== "undefined" ? localStorage.getItem("spa_user") : "{}";
   let isAdmin = false;
   try { isAdmin = JSON.parse(userStr || "{}")?.role === "admin"; } catch(e) {}
@@ -1037,6 +1075,11 @@ function AppointmentsPage() {
                     <button type="button" onClick={() => startEdit(item)} className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald">
                       <Pencil className="size-3" /> Sửa
                     </button>
+                    {item.status === "xong" && (
+                      <button type="button" onClick={() => handlePrint(item)} className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-champagne/40 hover:text-champagne ml-2">
+                        <Printer className="size-3" /> In phiếu
+                      </button>
+                    )}
                     
                   </td>
                 </tr>

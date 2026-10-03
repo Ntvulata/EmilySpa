@@ -9,7 +9,7 @@ import {
   deleteDoc,
   writeBatch
 } from "firebase/firestore";
-import { appointments, initialCustomers, packageHistory, serviceOptions, therapists, masterPackages, Customer, Appointment, PackageHistoryRecord } from "./spa-data";
+import { appointments, initialCustomers, packageHistory, serviceOptions, therapists, masterPackages, Customer, Appointment, PackageHistoryRecord, spaSettings } from "./spa-data";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -30,14 +30,22 @@ export const db = getFirestore(app);
 // 1. Initial Load: Fetch everything from Firestore and populate local arrays
 export const fetchInitialData = async () => {
   try {
-    const [apptsSnap, custsSnap, pkgsSnap, servicesSnap, therapistsSnap, masterPkgsSnap] = await Promise.all([
+    const [apptsSnap, custsSnap, pkgsSnap, servicesSnap, therapistsSnap, masterPkgsSnap, settingsSnap] = await Promise.all([
       getDocs(collection(db, "appointments")),
       getDocs(collection(db, "customers")),
       getDocs(collection(db, "packageHistory")),
       getDocs(collection(db, "services")),
       getDocs(collection(db, "therapists")),
-      getDocs(collection(db, "masterPackages"))
+      getDocs(collection(db, "masterPackages")),
+      getDoc(doc(db, "settings", "spaInfo"))
     ]);
+
+    if (settingsSnap.exists()) {
+      const s = settingsSnap.data();
+      spaSettings.spaName = s.spaName || "Emily Spa";
+      spaSettings.spaPhone = s.spaPhone || "";
+      spaSettings.spaAddress = s.spaAddress || "";
+    }
 
     // If completely empty, we can choose to seed it or leave it empty.
     // We will leave it empty as this is production data for the user.

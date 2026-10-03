@@ -1,6 +1,7 @@
 import React from "react";
 ﻿import { createFileRoute, Link } from "@tanstack/react-router";
-import { History, ShoppingCart, Scissors, Pencil, Trash2, ChevronDown, Check, ArrowRightLeft, Undo2 } from "lucide-react";
+import { History, ShoppingCart, Scissors, Pencil, Trash2, ChevronDown, Check, ArrowRightLeft, Undo2, Printer } from "lucide-react";
+import { printReceipt } from "@/lib/print";
 import { formatVnd, packageHistory, masterPackages, initialCustomers, serviceOptions } from "@/lib/spa-data";
 import { fbSavePackageHistory, fbDeletePackageHistory, fbGetServices } from "@/lib/firebase";
 import { useState, useRef, useEffect, type FormEvent } from "react";
@@ -80,6 +81,30 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
 }
 
 function PackagesHistoryPage() {
+  const handlePrint = (item: any) => {
+    try {
+      const customer = initialCustomers.find(c => c.id === item.customerId);
+      const pName = getPackageName(item.packageId);
+      
+      printReceipt({
+        id: item.id,
+        date: item.date,
+        customerName: customer?.name || "Khách lẻ",
+        customerPhone: customer?.phone || "",
+        items: [
+          {
+            name: `Mua mới: ${pName}`,
+            price: formatVnd(item.pricePaid || 0),
+            note: `Số lượng: +${item.valueChange}`
+          }
+        ],
+        total: formatVnd(item.pricePaid || 0)
+      });
+    } catch(e) {
+      alert("Lỗi in: " + e);
+    }
+  };
+
   const [sellMode, setSellMode] = useState<"master" | "custom">("master");
   const { action } = Route.useSearch();
   const [filter, setFilter] = useState<"all" | "sell" | "deduct">("all");
@@ -675,6 +700,9 @@ function PackagesHistoryPage() {
                 <td className="px-4 py-3.5 text-right whitespace-nowrap">
                   {item.type === "sell" ? (
                     <>
+                      <button type="button" onClick={() => handlePrint(item)} className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-champagne/40 hover:text-champagne mr-2">
+                        <Printer className="size-3" /> In phiếu
+                      </button>
                       <button type="button" onClick={() => startEdit(item.id)} className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald">
                         <Pencil className="size-3" /> Sửa
                       </button>

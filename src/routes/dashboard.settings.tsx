@@ -1,6 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { fbSaveSettings, fbGetSettings, fbGetUsers, fbSaveUser, fbDeleteUser } from "@/lib/firebase";
+import { spaSettings } from "@/lib/spa-data";
 
 export const Route = createFileRoute("/dashboard/settings")({
   head: () => ({
@@ -48,6 +49,9 @@ function SettingsPage() {
   const handleSave = async () => {
     try {
       await fbSaveSettings({ spaName, spaPhone, spaAddress });
+      spaSettings.spaName = spaName;
+      spaSettings.spaPhone = spaPhone;
+      spaSettings.spaAddress = spaAddress;
       setNotice("Đã lưu thông tin cài đặt!");
       setTimeout(() => setNotice(""), 3000);
     } catch (error) {
