@@ -789,11 +789,35 @@ function AppointmentsPage() {
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
                 Bắt đầu
-                <input type="time" className={inputClass} value={form.time} onChange={e => setForm({...form, time: e.target.value, endTime: calculateEndTime(e.target.value, form.serviceIds, serviceOptions)})} />
+                <input type="text" placeholder="HH:mm" maxLength={5} className={inputClass} value={form.time} onChange={e => {
+                    let v = e.target.value.replace(/[^0-9:]/g, "");
+                    if (v.length === 2 && !v.includes(":") && form.time.length < 2) v += ":";
+                    setForm({...form, time: v, endTime: v.length === 5 ? calculateEndTime(v, form.serviceIds, serviceOptions) : form.endTime});
+                  }} onBlur={e => {
+                    let v = e.target.value;
+                    if (/^\d{1,2}:\d{2}$/.test(v)) {
+                      let [h, m] = v.split(":").map(Number);
+                      if (h > 23) h = 23; if (m > 59) m = 59;
+                      v = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                      setForm({...form, time: v, endTime: calculateEndTime(v, form.serviceIds, serviceOptions)});
+                    }
+                  }} />
               </label>
               <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/50">
                 Kết thúc
-                <input type="time" className={inputClass} value={form.endTime} onChange={e => setForm({...form, endTime: e.target.value})} />
+                <input type="text" placeholder="HH:mm" maxLength={5} className={inputClass} value={form.endTime} onChange={e => {
+                    let v = e.target.value.replace(/[^0-9:]/g, "");
+                    if (v.length === 2 && !v.includes(":") && form.endTime.length < 2) v += ":";
+                    setForm({...form, endTime: v});
+                  }} onBlur={e => {
+                    let v = e.target.value;
+                    if (/^\d{1,2}:\d{2}$/.test(v)) {
+                      let [h, m] = v.split(":").map(Number);
+                      if (h > 23) h = 23; if (m > 59) m = 59;
+                      v = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                      setForm({...form, endTime: v});
+                    }
+                  }} />
               </label>
             </div>
             <div className={`sm:col-span-2 grid gap-4 ${customerPackages.length > 0 ? "grid-cols-3" : "grid-cols-1"}`}>
