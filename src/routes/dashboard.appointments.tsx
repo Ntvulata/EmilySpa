@@ -1,6 +1,6 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, type FormEvent, useEffect, useRef } from "react";
-import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera, Printer } from "lucide-react";
+import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera, Printer, Download } from "lucide-react";
 import { printReceipt } from "@/lib/print";
 import { formatVnd, appointments as initialAppointments, initialCustomers, serviceOptions, masterPackages, type Appointment, type AppointmentStatus, getRemainingPackageValue, packageHistory, therapists as masterTherapists } from "@/lib/spa-data";
 import { fbSaveAppointment, fbSaveAppointmentAndHistory, fbDeleteAppointment, fbGetTherapists, fbGetServices } from "@/lib/firebase";
@@ -168,6 +168,41 @@ function AppointmentsPage() {
   let isAdmin = false;
   try { isAdmin = JSON.parse(userStr || "{}")?.role === "admin"; } catch(e) {}
 
+
+    const exportList = () => {
+    let csv = "\uFEFF\"Ngày\",\"Giờ\",\"Khách hàng\",\"SĐT\",\"Dịch vụ\",\"Ghi chú\",\"KTV\",\"Sử dụng thẻ\",\"Thanh toán\",\"Trạng thái\"\n";
+    rows.forEach(item => {
+      const cust = initialCustomers.find(c => c.id === item.customerId);
+      const cName = cust ? cust.name : item.customerId;
+      const cPhone = cust ? cust.phone : "";
+      const svcs = (item.serviceIds || item.services || []).map(sid => serviceOptions.find(opt => opt.id === sid)?.name || sid).join(", ");
+      
+      let pkgText = "";
+      if (item.packagesDeducted && item.packagesDeducted.length > 0) {
+        pkgText = item.packagesDeducted.map(p => {
+          const pDef = masterPackages.find(x => x.id === p.packageId);
+          let name = pDef ? pDef.name : p.packageId;
+          if (!pDef && p.packageId.startsWith("CUSTOM_")) {
+            const h = packageHistory.find(x => x.packageId === p.packageId && x.customName);
+            if (h) name = h.customName;
+          }
+          return `${name} (-${p.type === 'balance' ? formatVnd(p.deducted || 0) : (p.deducted || 0) + ' buổi'})`;
+        }).join(" | ");
+      }
+      
+      let st = item.status === "xong" ? "Hoàn thành" : (item.status === "huy" ? "Khách hủy" : "Chờ phục vụ");
+      csv += `"${item.date}","${item.time}","${cName.replace(/"/g, '""')}","${cPhone}","${svcs.replace(/"/g, '""')}","${(item.note || "").replace(/"/g, '""')}","${(dbTherapists.find(t => t.id === item.therapistId || t.name === item.therapistId)?.name || item.therapistId || "").replace(/"/g, '""')}","${pkgText.replace(/"/g, '""')}","${formatVnd(item.price || 0).replace(/"/g, '""')}","${st}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Danh_Sach_Lich_Hen_${fromDate}_${toDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleCapture = async () => {
     setIsCapturing(true);
@@ -975,7 +1010,7 @@ function AppointmentsPage() {
                 Đến ngày:
                 <input type="date" className="rounded-[3px] border border-ink/15 bg-ivory px-3 py-1.5 outline-none transition focus:border-emerald" value={toDate} onChange={e => setToDate(e.target.value)} />
               </label>
-            </>
+            <button type="button" onClick={exportList} className="ml-2 inline-flex items-center gap-1.5 rounded-[3px] bg-emerald px-3 py-1.5 text-[11px] font-semibold text-ivory hover:bg-emerald/80 transition"><Download className="size-3.5" /> Tải Danh Sách</button></>
           ) : (
             <div className="flex items-center gap-1.5">
               <button type="button" onClick={() => shiftDate(-1)} className="rounded-[3px] border border-ink/15 bg-ivory p-1.5 text-ink/70 transition hover:bg-emerald/10 hover:text-emerald hover:border-emerald/30">

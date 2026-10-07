@@ -1,6 +1,8 @@
+import { fbGetTherapists } from "@/lib/firebase";
+import React from 'react';
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { formatVnd, appointments, packageHistory, masterPackages, therapists as masterTherapists, serviceOptions, initialCustomers } from "@/lib/spa-data";
+import {  formatVnd, appointments, packageHistory, masterPackages, therapists as masterTherapists, serviceOptions, initialCustomers  } from "@/lib/spa-data";
 import { Download } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/reports")({
@@ -17,8 +19,16 @@ function ReportsPage() {
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 6);
 
+  const [dbTherapists, setDbTherapists] = useState<any[]>(masterTherapists);
+  React.useEffect(() => {
+    fbGetTherapists().then(data => {
+      if (data && data.length > 0) setDbTherapists(data);
+    }).catch(console.error);
+  }, []);
+  
   const [fromDate, setFromDate] = useState(weekAgo.toISOString().split("T")[0]);
   const [toDate, setToDate] = useState(today.toISOString().split("T")[0]);
+  
 
   // Aggregate Data
   const { dataByDay, totalApptRev, totalPkgRev, totalRevenue, serviceMix, staffStats } = useMemo(() => {
@@ -59,12 +69,12 @@ function ReportsPage() {
       tPkg += pkgRev;
 
       
-    const staffStats = masterTherapists.map(t => {
+    const staffStats = dbTherapists.map(t => {
       let totalCommission = 0;
       let servicesCount = 0;
       let apptsCount = 0;
       
-      const appts = appointments.filter(a => a.status === 'xong' && a.therapistId === t.id && a.date >= fromDate && a.date <= toDate);
+      const appts = appointments.filter(a => a.status === 'xong' && (a.therapistId === t.id || a.therapistId === t.name || (a as any).therapist === t.name) && a.date >= fromDate && a.date <= toDate);
       apptsCount = appts.length;
       
       appts.forEach(a => {
@@ -99,12 +109,12 @@ function ReportsPage() {
       .sort((a, b) => b.count - a.count).slice(0, 10);
 
     
-    const staffStats = masterTherapists.map(t => {
+    const staffStats = dbTherapists.map(t => {
       let totalCommission = 0;
       let servicesCount = 0;
       let apptsCount = 0;
       
-      const appts = appointments.filter(a => a.status === 'xong' && a.therapistId === t.id && a.date >= fromDate && a.date <= toDate);
+      const appts = appointments.filter(a => a.status === 'xong' && (a.therapistId === t.id || a.therapistId === t.name || (a as any).therapist === t.name) && a.date >= fromDate && a.date <= toDate);
       apptsCount = appts.length;
       
       appts.forEach(a => {
@@ -120,14 +130,14 @@ function ReportsPage() {
       return { id: t.id, name: t.name, totalCommission, servicesCount, apptsCount };
     });
 
-    return {
-      staffStats,
-      dataByDay: byDay,
-      totalApptRev: tAppt,
-      totalPkgRev: tPkg,
-      totalRevenue: tAppt + tPkg,
-      serviceMix: sMix
-    };
+          return {
+        staffStats,
+        dataByDay: byDay,
+        totalApptRev: tAppt,
+        totalPkgRev: tPkg,
+        totalRevenue: tAppt + tPkg,
+        serviceMix: sMix
+      };
   }, [fromDate, toDate]);
 
   const maxDaily = Math.max(...dataByDay.map((item) => item.total), 1); // Avoid division by zero
@@ -207,7 +217,7 @@ function ReportsPage() {
     
     appts.forEach((a) => {
       const customerName = initialCustomers.find(c => c.id === a.customerId)?.name || a.customerId;
-      const therapistName = masterTherapists.find(t => t.id === a.therapistId)?.name || a.therapistId;
+      const therapistName = dbTherapists.find(t => t.id === a.therapistId || t.name === a.therapistId)?.name || a.therapistId;
       
       const serviceNames = [];
       let totalCommission = 0;
@@ -359,7 +369,68 @@ function ReportsPage() {
         )}
       </section>
 
-      <section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6 mt-8">
+                      <section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6 mt-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl text-ink">Xuất Excel Thẻ Khách Hàng</h2>
+              <p className="mt-1 text-sm text-ink/65">Xuất báo cáo số dư thẻ, biến động mua mới và sử dụng.</p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-4">
+              <button 
+                type="button" 
+                onClick={() => {
+                  const pkgMap: Record<string, any> = {};
+                  packageHistory.forEach(h => {
+                    if (!h.packageId) return; // safety
+                    const key = h.customerId + "_" + h.packageId;
+                    if (!pkgMap[key]) {
+                      pkgMap[key] = { customerId: h.customerId, packageId: h.packageId, opening: 0, bought: 0, used: 0 };
+                    }
+                    if (h.date < fromDate) {
+                      pkgMap[key].opening += h.valueChange;
+                    } else if (h.date >= fromDate && h.date <= toDate) {
+                      if (h.valueChange > 0) pkgMap[key].bought += h.valueChange;
+                      else pkgMap[key].used += Math.abs(h.valueChange);
+                    }
+                  });
+                  const pRep = Object.values(pkgMap).filter(p => p.opening > 0 || p.bought > 0 || p.used > 0);
+
+                  let csv = "\uFEFF\"Khách hàng\",\"Số ĐT\",\"Tên gói/thẻ\",\"Đầu kỳ\",\"Mua mới\",\"Sử dụng\",\"Còn lại\"\n";
+                  pRep.forEach(row => {
+                    const cust = initialCustomers.find(c => c.id === row.customerId);
+                    let pDef = masterPackages.find(p => p.id === row.packageId);
+                    let pName = pDef ? pDef.name : row.packageId;
+                    if (!pDef && row.packageId.startsWith("CUSTOM_")) {
+                      const h = packageHistory.find(x => x.packageId === row.packageId && x.customName);
+                      if (h) pName = h.customName;
+                    }
+                    const pType = pDef ? pDef.type : (row.packageId.startsWith("CUSTOM_") ? "sessions" : "none");
+                    const fmt = (val) => pType === "balance" ? formatVnd(val) : `${val} buổi`;
+                    const closing = row.opening + row.bought - row.used;
+                    
+                    csv += `"${(cust?.name || row.customerId).replace(/"/g, '""')}","${(cust?.phone || "").replace(/"/g, '""')}","${pName.replace(/"/g, '""')}","${fmt(row.opening)}","${fmt(row.bought)}","${fmt(row.used)}","${fmt(closing)}"\n`;
+                  });
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", url);
+                  link.setAttribute("download", `Bao_Cao_The_Khach_Hang_${fromDate}_${toDate}.csv`);
+                  link.style.visibility = 'hidden';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="flex shrink-0 items-center gap-2 rounded-[3px] bg-emerald px-4 py-2.5 text-xs font-semibold text-ivory transition hover:bg-emerald-soft"
+              >
+                <Download className="size-4" />
+                Xuất Excel Thẻ
+              </button>
+            </div>
+          </div>
+        </section>
+
+<section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6 mt-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="font-display text-2xl text-ink">Báo Cáo Hoa Hồng KTV</h2>
@@ -375,34 +446,7 @@ function ReportsPage() {
           </button>
         </div>
         
-        <div className="overflow-x-auto rounded-[3px] border border-ink/10 bg-ivory">
-          <table className="w-full min-w-[500px] text-left text-sm">
-            <thead className="border-b border-ink/10 bg-ink/5 text-xs uppercase tracking-wider text-ink/50">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Nhân viên</th>
-                <th className="px-4 py-3 font-semibold text-right">Số lịch hẹn</th>
-                <th className="px-4 py-3 font-semibold text-right">Số dịch vụ thực hiện</th>
-                <th className="px-4 py-3 font-semibold text-right">Tổng hoa hồng</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/5">
-              {staffStats.map(staff => (
-                <tr key={staff.id} className="transition hover:bg-ivory/60">
-                  <td className="px-4 py-3.5 font-medium text-ink/80">{staff.name}</td>
-                  <td className="px-4 py-3.5 text-right font-medium text-ink/70">{staff.apptsCount}</td>
-                  <td className="px-4 py-3.5 text-right font-medium text-ink/70">{staff.servicesCount}</td>
-                  <td className="px-4 py-3.5 text-right font-bold text-emerald">{formatVnd(staff.totalCommission)}</td>
-                </tr>
-              ))}
-              {staffStats.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-ink/50">Không có dữ liệu trong khoảng thời gian này</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+        </section>
 
     </div>
   );
