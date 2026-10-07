@@ -142,7 +142,7 @@ function ReportsPage() {
       .filter(a => a.status === "xong" && a.date >= fromDate && a.date <= toDate && Number(a.price || 0) > 0)
       .map(a => {
         const c = initialCustomers.find(x => x.id === a.customerId);
-        const svcs = (a.serviceIds || []).map(id => {
+        const svcs = (a.serviceIds || (a as any).services || []).map(id => {
           const s = serviceOptions.find(x => x.id === id);
           return s ? s.name : id;
         });
