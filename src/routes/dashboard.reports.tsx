@@ -41,14 +41,17 @@ function ReportsPage() {
       const apptRev = dayAppts.reduce((sum, a) => sum + Number(a.price || 0), 0);
       
       // Tính toán tỷ trọng dịch vụ (dựa trên các lịch hẹn đã hoàn thành)
-      dayAppts.forEach(a => {
-        (a.serviceIds || (a as any).services || []).forEach(s => {
-          sCounts[s] = (sCounts[s] || 0) + 1;
-          totalServices++;
+              // Tính toán tỷ trọng dịch vụ (dựa trên các lịch hẹn đã hoàn thành)
+        dayAppts.forEach(a => {
+          (a.serviceIds || (a as any).services || []).forEach(sid => {
+            const sDef = serviceOptions.find(opt => opt.id === sid);
+            const sName = sDef ? sDef.name : "Dịch vụ đã xóa";
+            sCounts[sName] = (sCounts[sName] || 0) + 1;
+            totalServices++;
+          });
         });
-      });
 
-      // 2. Số tiền bán thẻ/gói mới
+        // 2. Số tiền bán thẻ/gói mới
       const dayPkgs = packageHistory.filter(h => h.date === dayStr && h.type === "sell");
       const pkgRev = dayPkgs.reduce((sum, h) => sum + Number(h.pricePaid || 0), 0);
 
@@ -93,7 +96,7 @@ function ReportsPage() {
         count,
         share: totalServices > 0 ? Math.round((count / totalServices) * 100) : 0
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => b.count - a.count).slice(0, 10);
 
     
     const staffStats = masterTherapists.map(t => {
@@ -336,7 +339,7 @@ function ReportsPage() {
       </section>
 
       <section className="rounded-[3px] border border-ink/10 bg-ivory-deep/30 p-5 sm:p-6">
-        <h2 className="font-display text-2xl text-ink">Tỷ trọng dịch vụ hoàn thành</h2>
+        <h2 className="font-display text-2xl text-ink">Top 10 Tỷ trọng dịch vụ hoàn thành</h2>
         {serviceMix.length > 0 ? (
           <ul className="mt-4 space-y-3.5">
             {serviceMix.map((item) => (

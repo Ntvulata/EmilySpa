@@ -335,7 +335,7 @@ function AppointmentsPage() {
       let matchStatus = statusFilter === "all" || item.status === statusFilter;
         if (viewMode === "grid" && item.status === "huy") matchStatus = false;
         return matchDate && matchStatus;
-    }).sort((a, b) => a.time.localeCompare(b.time));
+    }).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
   }, [appts, fromDate, toDate, statusFilter, viewMode]);
 
     const therapists = useMemo(() => {
