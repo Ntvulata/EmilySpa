@@ -156,7 +156,7 @@ function ServicesPage() {
     const value = Number(pkgForm.value.replace(/\D/g, ""));
     const price = Number(pkgForm.price.replace(/\D/g, ""));
     
-    if (!name || !value || !price) {
+    if (!name || value === undefined || isNaN(value) || value <= 0 || price === undefined || isNaN(price)) {
       return setPkgError("Vui lòng nhập đầy đủ thông tin: Tên, Giá trị và Giá bán.");
     }
     

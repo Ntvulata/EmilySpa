@@ -360,7 +360,7 @@ function AppointmentsPage() {
     
     // Fallback lấy từ initialCustomers nếu cần (nếu chưa có trong history)
     const c = initialCustomers.find(x => x.id === form.customerId);
-    if (c) c.activePackages.forEach(p => pkgIds.add(p.packageId));
+    if (c && c.activePackages) c.activePackages.forEach(p => pkgIds.add(p.packageId));
 
         const active: { id: string, name: string, type: 'sessions' | 'balance', remaining: number }[] = [];
     pkgIds.forEach(id => {

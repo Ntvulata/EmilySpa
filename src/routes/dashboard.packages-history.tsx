@@ -368,7 +368,7 @@ function PackagesHistoryPage() {
              const oldIsCustom = packageHistory[idx].packageId.startsWith("CUSTOM_");
              finalPkgId = oldIsCustom ? packageHistory[idx].packageId : "CUSTOM_" + form.serviceId + "_" + Date.now();
              const svc = serviceOptions.find(s => s.id === form.serviceId);
-             finalCustomName = "Thẻ " + val + " buổi - " + (svc ? svc.name : form.serviceId);
+             finalCustomName = svc ? svc.name : form.serviceId;
           } else {
              finalCustomName = undefined;
           }
@@ -395,7 +395,7 @@ function PackagesHistoryPage() {
       if (sellMode === "custom") {
         finalPkgId = "CUSTOM_" + form.serviceId + "_" + Date.now();
         const svc = serviceOptions.find(s => s.id === form.serviceId);
-        finalCustomName = "Thẻ " + val + " buổi - " + (svc ? svc.name : form.serviceId);
+        finalCustomName = svc ? svc.name : form.serviceId;
       }
 
       recordToSave = {

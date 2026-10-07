@@ -35,8 +35,8 @@ function CustomersPage() {
 
   const startEdit = (idx: number) => {
     const c = customers[idx];
-    setForm({ name: c.name, phone: c.phone, tier: c.tier });
-    setActivePackages([...c.activePackages]);
+    setForm({ id: c.id, name: c.name, phone: c.phone, tier: c.tier });
+    setActivePackages(c.activePackages ? [...c.activePackages] : []);
     setEditIdx(idx);
     setOpen(true);
     setNotice("");
@@ -98,7 +98,7 @@ function CustomersPage() {
     }
   };
 
-  const getActivePackages = (customerId: string, legacyPackages: CustomerPackage[]) => {
+  const getActivePackages = (customerId: string, legacyPackages: CustomerPackage[] = []) => {
     const pkgIds = new Set(legacyPackages.map(p => p.packageId));
     packageHistory
       .filter(h => h.customerId === customerId)
@@ -217,7 +217,7 @@ function CustomersPage() {
                <p className="text-sm font-semibold text-ink">Gói/Thẻ đang sử dụng</p>
              </div>
              {(() => {
-                const formActivePackages = getActivePackages(form.id || "", activePackages);
+                const formActivePackages = getActivePackages(form.id || "", activePackages || []);
                 if (formActivePackages.length > 0) {
   const ITEMS_PER_PAGE = 50;
   const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
@@ -270,7 +270,7 @@ function CustomersPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {paginatedCustomers.map(({item, i}) => {
-          const validPackages = getActivePackages(item.id, item.activePackages);
+          const validPackages = getActivePackages(item.id, item.activePackages || []);
 
   const ITEMS_PER_PAGE = 50;
   const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
