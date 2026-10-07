@@ -92,7 +92,7 @@ function ServicesPage() {
     const price = Number(form.price.replace(/\D/g, ""));
     const commission = form.commission ? Number(form.commission.replace(/\D/g, "")) : 0;
     const minutes = Number(form.duration);
-    if (!name || !price || !minutes) return setError("Vui lòng nhập tên dịch vụ, thời lượng và giá.");
+    if (!name || price === undefined || isNaN(price) || !minutes) return setError("Vui lòng nhập tên dịch vụ, thời lượng và giá.");
     if (services.some((s, i) => i !== editIdx && s.name.toLowerCase() === name.toLowerCase()))
       return setError("Dịch vụ này đã có trong danh mục.");
     const item = { id: form.id || ("SRV_" + Date.now()), name, duration: `${minutes} phút`, price, commission };

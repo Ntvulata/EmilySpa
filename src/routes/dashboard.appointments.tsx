@@ -311,16 +311,20 @@ function AppointmentsPage() {
       .filter((t: any) => !t.role || t.role.includes("thu") || t.role.includes("K1") || t.role === "Kỹ thuật viên")
     .map(t => t.name);
 
-  const getPackageName = (id?: string) => {
+    const getPackageName = (id?: string) => {
     if (!id) return "Không dùng thẻ";
     const p = masterPackages.find(x => x.id === id);
-    return p ? p.name : id;
+    if (p) return p.name;
+    const h = packageHistory.find(x => x.packageId === id && x.customName);
+    return h ? h.customName : id;
   };
 
-  const getPackageType = (id?: string) => {
+    const getPackageType = (id?: string) => {
     if (!id) return "none";
     const p = masterPackages.find(x => x.id === id);
-    return p ? p.type : "none";
+    if (p) return p.type;
+    if (id.startsWith("CUSTOM_")) return "sessions";
+    return "none";
   };
 
   const rows = useMemo(() => {
@@ -1044,22 +1048,28 @@ function AppointmentsPage() {
                   </td>
                   <td className="px-4 py-3.5 text-ink/75 text-xs italic break-words">{item.note || <span className="text-ink/30 opacity-50">-</span>}</td>
                     <td className="px-4 py-3.5 text-ink/75">{dbTherapists.find(t => t.id === item.therapistId)?.name || "Unknown"}</td>
-                  <td className="px-4 py-3.5 text-xs font-medium text-emerald">{getPackageName(item.packageUsed)}</td>
+                  <td className="px-4 py-3.5 text-xs font-medium text-emerald">
+    {item.packagesDeducted && item.packagesDeducted.length > 0
+      ? item.packagesDeducted.map(p => getPackageName(p.packageId)).join(", ")
+      : getPackageName(item.packageUsed)}
+  </td>
                   <td className="px-4 py-3.5 text-right font-semibold">
-                    {type === "none" && <span className="text-ink">{formatVnd(item.price || 0)}</span>}
-                    {type === "sessions" && (
                       <div className="flex flex-col items-end">
-                         <span className="text-emerald text-xs">Thẻ: -{item.sessionsDeducted} buổi</span>
-                         {(item.price || 0) > 0 && <span className="text-ink text-xs">Mặt: +{formatVnd(item.price || 0)}</span>}
+                        {item.packagesDeducted && item.packagesDeducted.length > 0 ? (
+                          item.packagesDeducted.map((p, idx) => (
+                            <span key={idx} className="text-emerald text-xs">Thẻ: -{p.type === 'balance' ? formatVnd(p.deducted || 0) : `${p.deducted || 0} buổi`}</span>
+                          ))
+                        ) : (
+                          <>
+                            {type === "sessions" && <span className="text-emerald text-xs">Thẻ: -{item.sessionsDeducted} buổi</span>}
+                            {type === "balance" && <span className="text-emerald text-xs">Thẻ: -{formatVnd(item.balanceDeducted || 0)}</span>}
+                          </>
+                        )}
+                        {((item.price || 0) > 0 || (type === "none" && !(item.packagesDeducted && item.packagesDeducted.length > 0))) && (
+                          <span className="text-ink text-xs">{type === "none" && !(item.packagesDeducted && item.packagesDeducted.length > 0) ? "" : "Mặt: +"}{formatVnd(item.price || 0)}</span>
+                        )}
                       </div>
-                    )}
-                    {type === "balance" && (
-                      <div className="flex flex-col items-end">
-                         <span className="text-emerald text-xs">Thẻ: -{formatVnd(item.balanceDeducted || 0)}</span>
-                         {(item.price || 0) > 0 && <span className="text-ink text-xs">Mặt: +{formatVnd(item.price || 0)}</span>}
-                      </div>
-                    )}
-                  </td>
+                    </td>
                   <td className="px-4 py-3.5">
                     <select
                       value={item.status}
@@ -1191,7 +1201,14 @@ function AppointmentsPage() {
                                 <span key={idx} className="inline-block px-1.5 py-0.5 rounded-[2px] bg-ink/5 text-[9px] text-ink/80" style={{ color: getGridCardStyle(appointment).color || undefined, backgroundColor: getGridCardStyle(appointment).color === "#FFFFFF" ? "rgba(255,255,255,0.2)" : undefined }}>{s}</span> ); })}
                             </div>
                             <div className="mt-1.5 flex flex-col gap-1 items-start">
-                              {appointment.packageUsed && (
+                              {appointment.packagesDeducted && appointment.packagesDeducted.length > 0 ? (
+                                appointment.packagesDeducted.map((p, idx) => (
+                                  <p key={idx} className="inline-block rounded-[3px] bg-emerald/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald" style={{ color: getGridCardStyle(appointment).color || undefined, backgroundColor: getGridCardStyle(appointment).color === "#FFFFFF" ? "rgba(255,255,255,0.2)" : undefined }}>
+                                    Dùng thẻ: {getPackageName(p.packageId)} 
+                                    <span className="font-bold"> (-{p.type === 'balance' ? formatVnd(p.deducted || 0) : `${p.deducted || 0} buổi`})</span>
+                                  </p>
+                                ))
+                                                            ) : appointment.packageUsed && (
                                 <p className="inline-block rounded-[3px] bg-emerald/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald" style={{ color: getGridCardStyle(appointment).color || undefined, backgroundColor: getGridCardStyle(appointment).color === "#FFFFFF" ? "rgba(255,255,255,0.2)" : undefined }}>
                                   Dùng thẻ: {getPackageName(appointment.packageUsed)} 
                                   <span className="font-bold"> (-{getPackageType(appointment.packageUsed) === 'balance' ? formatVnd(appointment.balanceDeducted || 0) : `${appointment.sessionsDeducted || 0} buổi`})</span>
