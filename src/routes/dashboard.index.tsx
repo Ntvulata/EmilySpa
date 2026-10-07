@@ -18,7 +18,9 @@ export const Route = createFileRoute("/dashboard/")({
 });
 
 function DashboardOverview() {
-  const activeAppts = appointments.filter(a => a.status !== 'huy');
+    const todayDateStr = new Date().toISOString().split("T")[0];
+  const activeAppts = appointments.filter(a => a.status !== 'huy' && a.date === todayDateStr);
+  const todaysAppts = appointments.filter(a => a.date === todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
   const revenue = activeAppts.reduce((sum, item) => sum + item.price, 0);
   const done = activeAppts.filter((item) => item.status === 'xong').length;
   const servicesToday = activeAppts.reduce((sum, item) => sum + item.services.length, 0);
@@ -68,7 +70,7 @@ function DashboardOverview() {
           </div>
 
           <ul className="divide-y divide-ink/10">
-            {appointments.slice(0, 5).map((item) => (
+            {todaysAppts.slice(0, 5).map((item) => (
               <li key={item.id} className="flex flex-wrap items-center gap-3 py-3.5">
                 <span className="w-14 shrink-0 font-display text-xl text-emerald">{item.time}</span>
                 <div className="min-w-0 flex-1">

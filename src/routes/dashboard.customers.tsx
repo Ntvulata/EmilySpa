@@ -50,20 +50,23 @@ function CustomersPage() {
     let newCustomer: Customer;
     let oldPhone = null;
 
-    if (editIdx !== null) {
-      const updated = [...customers];
-      oldPhone = updated[editIdx].phone;
-      newCustomer = { ...updated[editIdx], ...form, activePackages };
-      updated[editIdx] = newCustomer;
-      setCustomers(updated);
-      setNotice(`Đã cập nhật thông tin cho ${form.name.trim()}.`);
-    } else {
-      newCustomer = { ...form, visits: 0, activePackages };
-      setCustomers([...customers, newCustomer]);
-      setNotice(`Đã thêm khách hàng mới: ${form.name.trim()}.`);
-    }
+          if (editIdx !== null) {
+        const updated = [...customers];
+        oldPhone = updated[editIdx].phone;
+        newCustomer = { ...updated[editIdx], ...form, activePackages };
+        updated[editIdx] = newCustomer;
+        setCustomers(updated);
+        const masterIdx = initialCustomers.findIndex(c => c.id === newCustomer.id);
+        if (masterIdx !== -1) initialCustomers[masterIdx] = newCustomer;
+        setNotice(`Đã cập nhật thông tin cho ${form.name.trim()}.`);
+      } else {
+        newCustomer = { ...form, visits: 0, activePackages };
+        setCustomers([...customers, newCustomer]);
+        initialCustomers.push(newCustomer as any);
+        setNotice(`Đã thêm khách hàng mới: ${form.name.trim()}.`);
+      }
 
-    // Save to Firebase
+      // Save to Firebase
     try {
       
       await fbSaveCustomer(newCustomer);
