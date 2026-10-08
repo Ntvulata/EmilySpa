@@ -53,6 +53,13 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
       <button
         type="button"
         onClick={() => { setOpen(!open); setSearch(""); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " " || (e.altKey && e.key === "ArrowDown")) {
+              e.preventDefault();
+              setOpen(!open);
+              setSearch("");
+            }
+          }}
         className="w-full flex items-center justify-between rounded-[3px] border border-ink/15 bg-ivory px-3 py-2.5 text-sm text-ink outline-none transition focus:border-emerald"
       >
         <span className="truncate">{selectedLabel || placeholder}</span>
@@ -68,6 +75,13 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
               placeholder="Tìm kiếm..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filtered.length > 0) {
+                    e.preventDefault();
+                    onChange(filtered[0].value);
+                    setOpen(false);
+                  }
+                }}
             />
           </div>
           <div className="overflow-y-auto p-1">

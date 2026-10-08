@@ -43,6 +43,13 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
       <button
         type="button"
         onClick={() => { setOpen(!open); setSearch(""); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " " || (e.altKey && e.key === "ArrowDown")) {
+              e.preventDefault();
+              setOpen(!open);
+              setSearch("");
+            }
+          }}
         className="w-full flex items-center justify-between rounded-[3px] border border-ink/15 bg-ivory px-3 py-2.5 text-sm text-ink outline-none transition focus:border-emerald"
       >
         <span className="truncate">{selectedLabel || placeholder}</span>
@@ -58,6 +65,13 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
               placeholder="Tìm kiếm..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filtered.length > 0) {
+                    e.preventDefault();
+                    onChange(filtered[0].value);
+                    setOpen(false);
+                  }
+                }}
             />
           </div>
           <div className="overflow-y-auto p-1">
@@ -153,8 +167,14 @@ function PackagesHistoryPage() {
   };
 
   const filteredRows = packageHistory.filter(h => {
-    if (filter !== "all" && h.type !== filter) return false;
-    if (h.date < fromDate || h.date > toDate) return false;
+    const isSell = h.type === "sell" && Number(h.valueChange) >= 0;
+    const visualCategory = isSell ? "sell" : "deduct";
+    if (filter !== "all" && visualCategory !== filter) return false;
+    
+    // allow search to bypass date
+    if (searchQuery.trim() === "") {
+        if (h.date < fromDate || h.date > toDate) return false;
+    }
     
     if (!searchQuery.trim()) return true;
     
@@ -707,7 +727,7 @@ function PackagesHistoryPage() {
                   )}
                 </td>
                 <td className="px-4 py-3.5 text-ink/75">{item.customName || getPackageName(item.packageId)}</td>
-                <td className={`px-4 py-3.5 font-semibold text-right ${item.type === "sell" ? "text-emerald" : "text-champagne"}`}>{getFormatValue(item.packageId, item.valueChange)}</td>
+                <td className={`px-4 py-3.5 font-semibold text-right ${(item.type === "sell" && Number(item.valueChange) >= 0) ? "text-emerald" : "text-champagne"}`}>{getFormatValue(item.packageId, item.valueChange)}</td>
                 <td className="px-4 py-3.5 font-semibold text-right text-ink/80">
                   {item.pricePaid !== undefined ? formatVnd(item.pricePaid) : "-"}
                 </td>

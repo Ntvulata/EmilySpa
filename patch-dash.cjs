@@ -1,19 +1,12 @@
 ﻿const fs = require('fs');
-let code = fs.readFileSync('src/routes/dashboard.index.tsx', 'utf8');
+let code = fs.readFileSync('src/routes/dashboard.tsx', 'utf8');
 
-const replacement = `  const todayDateStr = new Date().toISOString().split("T")[0];
-  const activeAppts = appointments.filter(a => a.status !== 'huy' && a.date === todayDateStr);
-  const todaysAppts = appointments.filter(a => a.date === todayDateStr).sort((a, b) => a.time.localeCompare(b.time));`;
+const navOld = `className="flex gap-1 overflow-x-auto px-3 pb-4 lg:flex-col lg:overflow-visible lg:px-3"`;
+const navNew = `className="flex gap-1 overflow-x-auto scrollbar-hide px-3 pb-4 lg:flex-col lg:overflow-visible lg:px-3"`;
 
-code = code.replace(
-  'const activeAppts = appointments.filter(a => a.status !== \'huy\');',
-  replacement
-);
+const footerOld = `className="mt-auto border-t border-ink/5 bg-ivory/50 px-5 py-4 text-center sm:px-8"`;
+const footerNew = `className="mt-auto border-t border-ink/5 bg-ivory/50 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,20px))] text-center sm:px-8"`;
 
-code = code.replace(
-  'appointments.slice(0, 5).map((item)',
-  'todaysAppts.slice(0, 5).map((item)'
-);
-
-fs.writeFileSync('src/routes/dashboard.index.tsx', code, 'utf8');
-console.log("Patched dashboard today filter.");
+code = code.replace(navOld, navNew).replace(footerOld, footerNew);
+fs.writeFileSync('src/routes/dashboard.tsx', code, 'utf8');
+console.log("Patched dashboard.tsx");
