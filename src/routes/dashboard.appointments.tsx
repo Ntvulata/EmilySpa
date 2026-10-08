@@ -1181,7 +1181,7 @@ function AppointmentsPage() {
               className="sticky top-0 z-30 grid border-b border-ink/10 bg-ivory-deep/95 backdrop-blur shadow-sm"
               style={{ gridTemplateColumns: `60px repeat(${therapists.length}, minmax(200px, 1fr))` }}
             >
-              <div className="border-r border-ink/10 px-2 py-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/45 text-center">
+              <div className="sticky left-0 z-40 border-r border-ink/10 px-2 py-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/45 text-center bg-ivory-deep/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                 Giờ
               </div>
               {therapists.map((therapist) => (
@@ -1234,7 +1234,7 @@ function AppointmentsPage() {
                     const isHour = min === 0;
                     if (!isHour && !hasEvent[i]) return null;
                     return (
-                      <div key={'time-'+i} className="border-r border-ink/10 flex items-start justify-center pt-0.5 pointer-events-none bg-ivory-deep/30" style={{ gridColumn: 1, gridRow: i + 1 }}>
+                      <div key={'time-'+i} className="sticky left-0 z-20 border-r border-ink/10 flex items-start justify-center pt-0.5 bg-ivory-deep/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]" style={{ gridColumn: 1, gridRow: i + 1 }}>
                         <span className="text-[10px] font-semibold text-ink/40">{timeStr}</span>
                       </div>
                     );
