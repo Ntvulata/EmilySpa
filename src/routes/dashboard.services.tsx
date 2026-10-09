@@ -1,3 +1,4 @@
+import { removeVietnameseTones } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { Pencil, Trash2, CreditCard } from "lucide-react";
 import { useState, useEffect, type FormEvent } from "react";
@@ -381,7 +382,7 @@ function ServicesPage() {
             </form>
           )}
           <ul className="divide-y divide-ink/10">
-            {services.map((item, i) => ({item, i})).filter(({item}) => !searchService || item.name.toLowerCase().includes(searchService.toLowerCase())).map(({item, i}) => (
+            {services.map((item, i) => ({item, i})).filter(({item}) => !searchService || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(searchService.toLowerCase()))).map(({item, i}) => (
               <li key={item.name} className="flex items-center justify-between gap-3 py-3.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">{item.name}</p>
@@ -497,7 +498,7 @@ function ServicesPage() {
           )}
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {packages.filter(item => !searchPackage || item.name.toLowerCase().includes(searchPackage.toLowerCase())).map((item) => (
+            {packages.filter(item => !searchPackage || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(searchPackage.toLowerCase()))).map((item) => (
               <div key={item.id} className="rounded-[3px] border border-ink/10 bg-ivory/60 p-4 flex flex-col justify-between">
                 <div>
                   <div className="flex items-start justify-between gap-3">

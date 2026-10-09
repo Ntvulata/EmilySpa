@@ -1,5 +1,6 @@
 import React from "react";
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { removeVietnameseTones } from "@/lib/utils";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { History, ShoppingCart, Scissors, Pencil, Trash2, ChevronDown, Check, ArrowRightLeft, Undo2, Printer } from "lucide-react";
 import { printReceipt } from "@/lib/print";
 import { formatVnd, packageHistory, masterPackages, initialCustomers, serviceOptions } from "@/lib/spa-data";
@@ -35,7 +36,7 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()) || o.value.toLowerCase().includes(search.toLowerCase()));
+  const filtered = options.filter(o => removeVietnameseTones(o.label.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || removeVietnameseTones(o.value.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())));
   const selectedLabel = options.find(o => o.value === value)?.label || "";
 
   return (
@@ -184,11 +185,12 @@ function PackagesHistoryPage() {
     const cPhone = customer?.phone?.toLowerCase() || "";
     const pName = getPackageName(h.packageId).toLowerCase();
     
-    return h.id.toLowerCase().includes(q) || 
-           cName.includes(q) || 
-           cPhone.includes(q) || 
-           pName.includes(q) || 
-           (h.note && h.note.toLowerCase().includes(q));
+    const qClean = removeVietnameseTones(q);
+      return removeVietnameseTones(h.id.toLowerCase()).includes(qClean) || 
+             removeVietnameseTones(cName).includes(qClean) || 
+             cPhone.includes(qClean) || 
+             removeVietnameseTones(pName).includes(qClean) || 
+             (h.note && removeVietnameseTones(h.note.toLowerCase()).includes(qClean));
   }).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
   const ITEMS_PER_PAGE = 50;
   const totalPages = Math.ceil(filteredRows.length / ITEMS_PER_PAGE) || 1;
@@ -744,7 +746,7 @@ function PackagesHistoryPage() {
                       
                     </>
                   ) : item.type === "deduct" ? (
-                    <Link to="/dashboard/appointments" className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald">Đến Lịch hẹn</Link>
+                    <a href={`/dashboard/appointments?hl=${item.appointmentId}`} className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald">Đến Lịch hẹn</a>
                   ) : (
                     <button type="button" onClick={() => deleteItem(item.id)} className="inline-flex items-center gap-1.5 rounded-[3px] border border-ink/15 px-3 py-1.5 text-[11px] font-semibold text-ink/70 transition hover:border-red-400 hover:text-red-500"><Trash2 className="size-3" /> Xóa</button>
                   )}

@@ -1,4 +1,5 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+﻿import { removeVietnameseTones } from "@/lib/utils";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, type FormEvent, useEffect, useRef } from "react";
 import { List, TableProperties, Pencil, Trash2, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Camera, Printer, Download } from "lucide-react";
 import { printReceipt } from "@/lib/print";
@@ -45,7 +46,7 @@ function SearchableSelect({ options, value, onChange, placeholder }: { options: 
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()) || o.value.toLowerCase().includes(search.toLowerCase()));
+  const filtered = options.filter(o => removeVietnameseTones(o.label.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || removeVietnameseTones(o.value.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())));
   const selectedLabel = options.find(o => o.value === value)?.label || "";
 
   return (
@@ -274,8 +275,11 @@ function AppointmentsPage() {
 
   const d = new Date();
   d.setDate(d.getDate() - 6);
-  const [fromDate, setFromDate] = useState(d.toISOString().split("T")[0]);
-  const [toDate, setToDate] = useState(new Date().toISOString().split("T")[0]);
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const hl = searchParams.get("hl");
+  const hlAppt = hl ? initialAppointments.find(a => a.id === hl) : null;
+  const [fromDate, setFromDate] = useState(hlAppt ? hlAppt.date : d.toISOString().split("T")[0]);
+  const [toDate, setToDate] = useState(hlAppt ? hlAppt.date : new Date().toISOString().split("T")[0]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dbTherapists, setDbTherapists] = useState<any[]>([]);
   useEffect(() => {
@@ -297,6 +301,25 @@ function AppointmentsPage() {
   }, []);
 
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes("hl=")) {
+      setViewMode("list");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hl && viewMode === "list") {
+      setTimeout(() => {
+        const el = document.getElementById(`appt-${hl}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Highlight effect
+          el.classList.add('bg-emerald/20');
+          setTimeout(() => el.classList.remove('bg-emerald/20'), 2000);
+        }
+      }, 500);
+    }
+  }, [hl, viewMode]);
 
   useEffect(() => {
     if (viewMode === "grid") {
@@ -526,7 +549,7 @@ function AppointmentsPage() {
   };
 
   const processPackageDeduction = (apptId: string, apptDate: string, customerId: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number) => {
-    const nextId = "HT-" + Date.now();
+    const nextId = "HT-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
     const note = `Làm dịch vụ ${apptId}`;
     const valueChange = type === "sessions" ? -dedSessions : -dedBalance;
     
@@ -1108,7 +1131,7 @@ function AppointmentsPage() {
               {rows.map(item => {
                 const type = getPackageType(item.packageUsed);
                 return (
-                <tr key={item.id} className="transition hover:bg-ivory/60">
+                <tr key={item.id} id={`appt-${item.id}`} className={`transition ${hl === item.id ? 'bg-emerald/10' : 'hover:bg-ivory/60'}`}>
                   <td className="px-4 py-3.5">
                     <p className="font-semibold text-ink">{initialCustomers.find(c => c.id === item.customerId)?.name || "Unknown"}</p>
                     <p className="text-[11px] text-ink/50">{item.time} - {item.date}</p>

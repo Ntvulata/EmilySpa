@@ -1,4 +1,5 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+﻿import { removeVietnameseTones } from "@/lib/utils";
+import { createFileRoute } from "@tanstack/react-router";
 import { Pencil, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
@@ -116,7 +117,7 @@ function CustomersPage() {
   };
 
   const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
+  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
   const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
@@ -223,7 +224,7 @@ function CustomersPage() {
                 const formActivePackages = getActivePackages(form.id || "", activePackages || []);
                 if (formActivePackages.length > 0) {
   const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
+  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
   const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
@@ -237,7 +238,7 @@ function CustomersPage() {
                           }
                           if (!def) return null;
   const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
+  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
   const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
@@ -276,7 +277,7 @@ function CustomersPage() {
           const validPackages = getActivePackages(item.id, item.activePackages || []);
 
   const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
+  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
   const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
@@ -307,7 +308,7 @@ function CustomersPage() {
                           }
                           if (!def) return null;
   const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || item.name.toLowerCase().includes(search.toLowerCase()) || item.phone.includes(search));
+  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
   const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
