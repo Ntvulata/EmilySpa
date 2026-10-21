@@ -7,7 +7,9 @@ import {
   setDoc, 
   doc, 
   deleteDoc,
-  writeBatch
+  writeBatch,
+  query,
+  where
 } from "firebase/firestore";
 import { appointments, initialCustomers, packageHistory, serviceOptions, therapists, masterPackages, Customer, Appointment, PackageHistoryRecord, spaSettings } from "./spa-data";
 
@@ -109,18 +111,44 @@ export const fbSaveAppointmentAndHistory = async (appt: Appointment, records: Pa
   const apptRef = doc(db, "appointments", appt.id);
   batch.set(apptRef, appt);
 
-  if (records && records.length > 0) {
-    for (const rec of records) {
-      const recRef = doc(db, "packageHistory", rec.id);
-      batch.set(recRef, rec);
-    }
+  // 1. Quét trực tiếp trên Firestore để tìm mọi bản ghi trừ thẻ cũ gắn với appointmentId này để dọn sạch
+  try {
+    const q = query(collection(db, "packageHistory"), where("appointmentId", "==", appt.id));
+    const oldSnap = await getDocs(q);
+    oldSnap.forEach(oldDoc => {
+      // Nếu bản ghi cũ không nằm trong danh sách records mới thì xóa triệt để
+      if (!records || !records.some(r => r.id === oldDoc.id)) {
+        batch.delete(oldDoc.ref);
+        const idx = packageHistory.findIndex(h => h.id === oldDoc.id);
+        if (idx !== -1) packageHistory.splice(idx, 1);
+      }
+    });
+  } catch (err) {
+    console.error("Lỗi khi quét lịch sử thẻ cũ trên Firestore:", err);
   }
 
+  // 2. Xóa các ID được chỉ định riêng lẻ (nếu có)
   if (deletedRecordId) {
     const ids = Array.isArray(deletedRecordId) ? deletedRecordId : [deletedRecordId];
     for (const id of ids) {
       const delRef = doc(db, "packageHistory", id);
       batch.delete(delRef);
+      const idx = packageHistory.findIndex(h => h.id === id);
+      if (idx !== -1) packageHistory.splice(idx, 1);
+    }
+  }
+
+  // 3. Ghi các bản ghi trừ thẻ mới (nếu có)
+  if (records && records.length > 0) {
+    for (const rec of records) {
+      const recRef = doc(db, "packageHistory", rec.id);
+      batch.set(recRef, rec);
+      const existIdx = packageHistory.findIndex(h => h.id === rec.id);
+      if (existIdx === -1) {
+        packageHistory.push(rec);
+      } else {
+        packageHistory[existIdx] = rec;
+      }
     }
   }
 

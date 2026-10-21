@@ -33,6 +33,7 @@ const inputClass = "w-full rounded-lg border border-ink/15 bg-white px-3.5 py-2.
 
 function SearchableSelect({ options, value, onChange, placeholder }: { options: {value: string, label: string}[], value: string, onChange: (v: string) => void, placeholder: string }) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
@@ -548,8 +549,9 @@ function AppointmentsPage() {
     }
   };
 
-  const processPackageDeduction = (apptId: string, apptDate: string, customerId: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number) => {
-    const nextId = "HT-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
+  const processPackageDeduction = (apptId: string, apptDate: string, customerId: string, packageId: string, type: 'sessions' | 'balance', dedSessions: number, dedBalance: number, index = 0) => {
+    const cleanPkgId = (packageId || "pkg").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const nextId = `HT_${apptId}_${cleanPkgId}_${index}`;
     const note = `Làm dịch vụ ${apptId}`;
     const valueChange = type === "sessions" ? -dedSessions : -dedBalance;
     
@@ -563,7 +565,12 @@ function AppointmentsPage() {
       note,
       appointmentId: apptId
     };
-    packageHistory.push(record);
+    const existIdx = packageHistory.findIndex(h => h.id === nextId);
+    if (existIdx !== -1) {
+      packageHistory[existIdx] = record;
+    } else {
+      packageHistory.push(record);
+    }
     return record;
   };
 
@@ -597,16 +604,16 @@ function AppointmentsPage() {
       if (isNewlyCompleted && updatedAppt.packageUsed) {
         const t = getPackageType(updatedAppt.packageUsed);
         if (updatedAppt.packagesDeducted && updatedAppt.packagesDeducted.length > 0) {
-          newRecords = updatedAppt.packagesDeducted.map(pkg => 
+          newRecords = updatedAppt.packagesDeducted.map((pkg, idx) => 
             processPackageDeduction(updatedAppt.id, updatedAppt.date, updatedAppt.customerId, pkg.packageId, pkg.type,
               pkg.type === "sessions" ? pkg.deducted : 0,
-              pkg.type === "balance" ? pkg.deducted : 0)
+              pkg.type === "balance" ? pkg.deducted : 0, idx)
           );
         } else if (updatedAppt.packageUsed) {
           const t = getPackageType(updatedAppt.packageUsed);
           newRecords = [processPackageDeduction(
             updatedAppt.id, updatedAppt.date, updatedAppt.customerId, updatedAppt.packageUsed, t,
-            updatedAppt.sessionsDeducted || 0, updatedAppt.balanceDeducted || 0)];
+            updatedAppt.sessionsDeducted || 0, updatedAppt.balanceDeducted || 0, 0)];
         }
       }
       
@@ -625,6 +632,8 @@ function AppointmentsPage() {
   };
 
   const submit = async (e: FormEvent) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       e.preventDefault();
       
@@ -729,12 +738,13 @@ function AppointmentsPage() {
           }
 
           if ((isNewlyCompleted || isEditingCompleted) && form.packagesDeducted.length > 0) {
-            newHistoryRecords = form.packagesDeducted.map(pkg => {
+            newHistoryRecords = form.packagesDeducted.map((pkg, idx) => {
               const dedVal = Number(String(pkg.deducted).replace(/\D/g, "")) || 0;
               return processPackageDeduction(
                 savedAppt.id, savedAppt.date, savedAppt.customerId, pkg.packageId, pkg.type, 
                 pkg.type === "sessions" ? dedVal : 0, 
-                pkg.type === "balance" ? dedVal : 0
+                pkg.type === "balance" ? dedVal : 0,
+                idx
               );
             });
           }
@@ -763,12 +773,13 @@ function AppointmentsPage() {
         };
 
         if (form.status === "xong" && form.packagesDeducted.length > 0) {
-          newHistoryRecords = form.packagesDeducted.map(pkg => {
+          newHistoryRecords = form.packagesDeducted.map((pkg, idx) => {
             const dedVal = Number(String(pkg.deducted).replace(/\D/g, "")) || 0;
             return processPackageDeduction(
               savedAppt.id, savedAppt.date, savedAppt.customerId, pkg.packageId, pkg.type,
               pkg.type === "sessions" ? dedVal : 0,
-              pkg.type === "balance" ? dedVal : 0
+              pkg.type === "balance" ? dedVal : 0,
+              idx
             );
           });
         }
@@ -788,24 +799,28 @@ function AppointmentsPage() {
       setOpen(false);
     } catch (criticalError: any) {
       alert("Lỗi kĩ thuật (Crash): " + criticalError.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-4">
-          <h1 className="font-display text-2xl leading-tight text-ink sm:text-3xl">Lịch hẹn Spa</h1>
-          <p className="hidden md:block max-w-[52ch] text-xs leading-relaxed text-ink/65 m-0">
-            Quản lý lịch hẹn, điều phối nhân viên và theo dõi trạng thái phục vụ khách hàng.
-          </p>
+      <div className="sticky top-0 z-40 -mx-5 -mt-6 mb-3 sm:-mx-8 sm:-mt-8 px-5 py-3 sm:px-8 bg-ivory/95 backdrop-blur-md border-b border-ink/10 shadow-sm transition-all">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <h1 className="font-display text-2xl leading-tight text-ink sm:text-3xl">Lịch hẹn Spa</h1>
+            <p className="hidden md:block max-w-[52ch] text-xs leading-relaxed text-ink/65 m-0">
+              Quản lý lịch hẹn, điều phối nhân viên và theo dõi trạng thái phục vụ khách hàng.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => open ? setOpen(false) : startNew()}
+            className="rounded-[3px] bg-emerald px-4 py-2 text-xs font-semibold text-ivory transition hover:bg-emerald-soft shadow-sm"
+          >
+            {open ? "Đóng biểu mẫu" : "Tạo Lịch Hẹn Mới"}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => open ? setOpen(false) : startNew()}
-          className="rounded-[3px] bg-emerald px-4 py-2 text-xs font-semibold text-ivory transition hover:bg-emerald-soft"
-        >
-          {open ? "Đóng biểu mẫu" : "Tạo Lịch Hẹn Mới"}
-        </button>
       </div>
 
       {notice && (
@@ -1053,7 +1068,7 @@ function AppointmentsPage() {
               
               <div className="flex gap-3">
               <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-ink/15 px-5 py-2.5 text-xs font-semibold text-ink/70 transition-all hover:bg-ink/5 hover:border-ink/25">Huỷ</button>
-            <button type="submit" className="rounded-lg bg-emerald px-6 py-2.5 text-xs font-bold text-ivory shadow-md shadow-emerald/25 transition-all hover:bg-emerald-soft hover:shadow-lg hover:shadow-emerald/30 hover:-translate-y-0.5">Lưu lại</button>
+            <button type="submit" disabled={isSubmitting} className={`rounded-lg bg-emerald px-6 py-2.5 text-xs font-bold text-ivory shadow-md shadow-emerald/25 transition-all hover:bg-emerald-soft hover:shadow-lg hover:shadow-emerald/30 hover:-translate-y-0.5 ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}>{isSubmitting ? "Đang lưu..." : "Lưu lại"}</button>
           </div>
         </div>
         </form>
