@@ -33,7 +33,6 @@ const inputClass = "w-full rounded-lg border border-ink/15 bg-white px-3.5 py-2.
 
 function SearchableSelect({ options, value, onChange, placeholder }: { options: {value: string, label: string}[], value: string, onChange: (v: string) => void, placeholder: string }) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
@@ -345,6 +344,7 @@ function AppointmentsPage() {
   }, [viewMode, fromDate, toDate]);
     const [isCapturing, setIsCapturing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [appts, setAppts] = useState(initialAppointments);
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -483,7 +483,8 @@ function AppointmentsPage() {
       packagesDeducted: [],
       price: serviceOptions.length > 0 && serviceOptions[0].price ? Number(serviceOptions[0].price).toLocaleString("en-US") : "",
         sessionsDeducted: "1",
-      balanceDeducted: ""
+      balanceDeducted: "",
+      note: ""
     });
     setEditId(null);
     setOpen(true);
