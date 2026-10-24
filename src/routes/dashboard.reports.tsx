@@ -174,7 +174,8 @@ function ReportsPage() {
         } else if (h.customName) {
           pName = h.customName;
         } else if (h.packageId.startsWith("CUSTOM_")) {
-          const origin = packageHistory.find(x => x.packageId === h.packageId && x.customName);
+          const origin = packageHistory.find(x => x.customerId === h.customerId && x.packageId === h.packageId && x.customName)
+                      || packageHistory.find(x => x.packageId === h.packageId && x.customName);
           if (origin) pName = origin.customName;
         }
         
@@ -402,7 +403,8 @@ function ReportsPage() {
                     let pDef = masterPackages.find(p => p.id === row.packageId);
                     let pName = pDef ? pDef.name : row.packageId;
                     if (!pDef && row.packageId.startsWith("CUSTOM_")) {
-                      const h = packageHistory.find(x => x.packageId === row.packageId && x.customName);
+                      const h = packageHistory.find(x => x.customerId === row.customerId && x.packageId === row.packageId && x.customName)
+                             || packageHistory.find(x => x.packageId === row.packageId && x.customName);
                       if (h) pName = h.customName;
                     }
                     const pType = pDef ? pDef.type : (row.packageId.startsWith("CUSTOM_") ? "sessions" : "none");

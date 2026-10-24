@@ -232,17 +232,13 @@ function CustomersPage() {
                     <ul className="mb-4 space-y-2">
                       {formActivePackages.map(pkg => {
                         let def = masterPackages.find(m => m.id === pkg.packageId);
-                          if (!def && pkg.packageId.startsWith("CUSTOM_")) {
-                            const h = packageHistory.find(x => x.packageId === pkg.packageId && x.customName);
-                            def = { name: h ? (h.customName || pkg.packageId) : pkg.packageId, type: "sessions" } as any;
-                          }
-                          if (!def) return null;
-  const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
-  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
-  const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-
-  return (
+                        if (!def && pkg.packageId.startsWith("CUSTOM_")) {
+                          const h = packageHistory.find(x => x.customerId === form.id && x.packageId === pkg.packageId && x.customName)
+                                 || packageHistory.find(x => x.packageId === pkg.packageId && x.customName);
+                          def = { name: h ? (h.customName || pkg.packageId) : pkg.packageId, type: "sessions" } as any;
+                        }
+                        if (!def) return null;
+                        return (
                           <li key={pkg.packageId} className="flex items-center justify-between gap-3 bg-ivory p-3 rounded-[3px] border border-ink/10">
                             <div>
                               <p className="text-sm font-medium text-ink">{def.name}</p>
@@ -251,7 +247,7 @@ function CustomersPage() {
                               </p>
                             </div>
                           </li>
-                        )
+                        );
                       })}
                     </ul>
                   )
@@ -302,17 +298,13 @@ function CustomersPage() {
                     <ul className="space-y-1.5">
                       {validPackages.map(pkg => {
                         let def = masterPackages.find(m => m.id === pkg.packageId);
-                          if (!def && pkg.packageId.startsWith("CUSTOM_")) {
-                            const h = packageHistory.find(x => x.packageId === pkg.packageId && x.customName);
-                            def = { name: h ? (h.customName || pkg.packageId) : pkg.packageId, type: "sessions" } as any;
-                          }
-                          if (!def) return null;
-  const ITEMS_PER_PAGE = 50;
-  const filteredCustomers = customers.map((item, i) => ({item, i})).filter(({item}) => !search || removeVietnameseTones(item.name.toLowerCase()).includes(removeVietnameseTones(search.toLowerCase())) || item.phone.includes(search));
-  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
-  const paginatedCustomers = filteredCustomers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-
-  return (
+                        if (!def && pkg.packageId.startsWith("CUSTOM_")) {
+                          const h = packageHistory.find(x => x.customerId === item.id && x.packageId === pkg.packageId && x.customName)
+                                 || packageHistory.find(x => x.packageId === pkg.packageId && x.customName);
+                          def = { name: h ? (h.customName || pkg.packageId) : pkg.packageId, type: "sessions" } as any;
+                        }
+                        if (!def) return null;
+                        return (
                           <li key={pkg.packageId} className="flex justify-between items-center text-sm border-b border-ink/5 pb-1 last:border-0 last:pb-0">
                             <span className="text-ink truncate pr-2" title={def.name}>{def.name}</span>
                             <span className="font-semibold text-emerald shrink-0">

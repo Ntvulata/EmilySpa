@@ -155,10 +155,11 @@ function PackagesHistoryPage() {
   }, []);
   const [page, setPage] = useState(1);
 
-  const getPackageName = (id: string) => {
+  const getPackageName = (id: string, customerId?: string) => {
     const m = masterPackages.find(p => p.id === id);
     if (m) return m.name;
-    const h = packageHistory.find(x => x.packageId === id && x.customName);
+    const h = (customerId ? packageHistory.find(x => x.customerId === customerId && x.packageId === id && x.customName) : null)
+           || packageHistory.find(x => x.packageId === id && x.customName);
     return h ? h.customName : id;
   };
   const getFormatValue = (pkgId: string, value: number) => {
@@ -230,7 +231,8 @@ function PackagesHistoryPage() {
             result.push({ pId, name: pDef.name, remaining, type: pDef.type });
           } else if (pId.startsWith("CUSTOM_")) {
             // Find custom name from history
-            const h = packageHistory.find(x => x.packageId === pId && x.customName);
+            const h = packageHistory.find(x => x.customerId === cForm.customerId && x.packageId === pId && x.customName)
+                   || packageHistory.find(x => x.packageId === pId && x.customName);
             result.push({ pId, name: h ? h.customName : pId, remaining, type: "sessions" });
           }
       }
@@ -728,7 +730,7 @@ function PackagesHistoryPage() {
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-champagne bg-champagne/10 px-2 py-1 rounded-[2px]"><Scissors className="size-3" /> TRỪ THẺ</span>
                   )}
                 </td>
-                <td className="px-4 py-3.5 text-ink/75">{item.customName || getPackageName(item.packageId)}</td>
+                <td className="px-4 py-3.5 text-ink/75">{item.customName || getPackageName(item.packageId, item.customerId)}</td>
                 <td className={`px-4 py-3.5 font-semibold text-right ${(item.type === "sell" && Number(item.valueChange) >= 0) ? "text-emerald" : "text-champagne"}`}>{getFormatValue(item.packageId, item.valueChange)}</td>
                 <td className="px-4 py-3.5 font-semibold text-right text-ink/80">
                   {item.pricePaid !== undefined ? formatVnd(item.pricePaid) : "-"}

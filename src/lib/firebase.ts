@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { 
   getFirestore, 
   collection, 
@@ -14,18 +15,40 @@ import {
 import { appointments, initialCustomers, packageHistory, serviceOptions, therapists, masterPackages, Customer, Appointment, PackageHistoryRecord, spaSettings } from "./spa-data";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBwhkFNT3TALvvhVL6jerA70XiTeqwBjEw",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "emily-spa.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "emily-spa",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "emily-spa.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "496385289916",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:496385289916:web:726d968e129906c465aab9",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-Q96ZWHK0WW"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+let authInstance: any = null;
+let googleProviderInstance: any = null;
+
+export const getFirebaseAuth = () => {
+  if (typeof window === "undefined") return null;
+  if (!authInstance) {
+    try {
+      authInstance = getAuth(app);
+    } catch (e) {
+      console.warn("Could not init auth:", e);
+    }
+  }
+  return authInstance;
+};
+
+export const getGoogleProvider = () => {
+  if (!googleProviderInstance) {
+    googleProviderInstance = new GoogleAuthProvider();
+  }
+  return googleProviderInstance;
+};
 
 // --- Sync Functions ---
 
@@ -208,4 +231,40 @@ export const fbGetServices = async () => {
 export const fbGetTherapists = async () => {
   const snap = await getDocs(collection(db, "therapists"));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+// --- Google Whitelist Helpers ---
+export const fbGetGoogleUsers = async () => {
+  try {
+    const snap = await getDocs(collection(db, "googleUsers"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error getting google users:", err);
+    return [];
+  }
+};
+
+export const fbSaveGoogleUser = async (user: { email: string; role: "admin" | "user"; name?: string }) => {
+  const emailKey = user.email.trim().toLowerCase();
+  await setDoc(doc(db, "googleUsers", emailKey), {
+    email: emailKey,
+    role: user.role,
+    name: user.name || "",
+    updatedAt: new Date().toISOString()
+  });
+};
+
+export const fbDeleteGoogleUser = async (email: string) => {
+  const emailKey = email.trim().toLowerCase();
+  await deleteDoc(doc(db, "googleUsers", emailKey));
+};
+
+export const fbLoginWithGoogle = async () => {
+  const firebaseAuth = getFirebaseAuth();
+  if (!firebaseAuth) {
+    throw new Error("Firebase Auth không khả dụng trên môi trường này.");
+  }
+  const provider = getGoogleProvider();
+  const result = await signInWithPopup(firebaseAuth, provider);
+  return result.user;
 };
