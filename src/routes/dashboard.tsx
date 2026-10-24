@@ -1,4 +1,4 @@
-﻿import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -21,8 +21,7 @@ export const Route = createFileRoute("/dashboard")({
 const navItems = [
   { to: "/dashboard", label: "Tổng Quan", icon: LayoutDashboard, exact: true },
   { to: "/dashboard/appointments", label: "Lịch Hẹn Spa", icon: CalendarDays, exact: false },
-  { to: "/dashboard/customers", label: "Khách Hàng", icon: Users,
-  Phone, exact: false },
+  { to: "/dashboard/customers", label: "Khách Hàng", icon: Users, exact: false },
   { to: "/dashboard/services", label: "Dịch Vụ & Nhân Viên", icon: Sparkles, exact: false },
   { to: "/dashboard/packages-history", label: "Lịch Sử Gói/Thẻ", icon: CreditCard, exact: false },
   { to: "/dashboard/reports", label: "Báo Cáo Doanh Thu", icon: LineChart, exact: false },
@@ -30,9 +29,33 @@ const navItems = [
 ] as const;
 
 function DashboardLayout() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    // 1. Kiểm tra phiên đăng nhập (Auth Guard)
+    const stored = localStorage.getItem("spa_user");
+    if (!stored) {
+      navigate({ to: "/" });
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      if (!parsed || (!parsed.username && !parsed.email)) {
+        localStorage.removeItem("spa_user");
+        navigate({ to: "/" });
+        return;
+      }
+      setCurrentUser(parsed);
+    } catch {
+      localStorage.removeItem("spa_user");
+      navigate({ to: "/" });
+      return;
+    }
+
+    // 2. Tải dữ liệu ban đầu
     let mounted = true;
     const init = async () => {
       await fetchInitialData();
@@ -42,7 +65,13 @@ function DashboardLayout() {
     };
     init();
     return () => { mounted = false; };
-  }, []);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("spa_user");
+    sessionStorage.clear();
+    navigate({ to: "/" });
+  };
 
   const today = new Date().toLocaleDateString("vi-VN", {
     weekday: "long",
@@ -97,13 +126,21 @@ function DashboardLayout() {
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-champagne-soft/80">
                 Đang đăng nhập
               </p>
-              <p className="mt-1.5 text-sm text-ivory">Quản trị viên</p>
-              <Link
-                to="/"
-                className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-champagne transition hover:text-ivory"
+              <p className="mt-1.5 text-sm font-medium text-ivory truncate">
+                {currentUser?.username || "Quản trị viên"}
+              </p>
+              {currentUser?.email && (
+                <p className="text-[11px] text-ivory/60 truncate">
+                  {currentUser.email}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-champagne transition hover:text-ivory cursor-pointer"
               >
                 <LogOut className="size-3.5" /> Đăng xuất
-              </Link>
+              </button>
             </div>
           </div>
         </aside>
@@ -130,12 +167,13 @@ function DashboardLayout() {
               >
                 Đặt lịch ngay
               </Link>
-              <Link
-                to="/"
-                className="rounded-[3px] border border-ink/15 px-4 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald lg:hidden"
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-[3px] border border-ink/15 px-4 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-emerald/40 hover:text-emerald lg:hidden cursor-pointer"
               >
                 Đăng xuất
-              </Link>
+              </button>
             </div>
           </header>
 

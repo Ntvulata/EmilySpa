@@ -74,7 +74,8 @@ function Index() {
       if (err.code === "auth/popup-closed-by-user") {
         setMessage("Bạn đã đóng cửa sổ đăng nhập Google.");
       } else if (err.code === "auth/unauthorized-domain") {
-        setMessage("Tên miền này chưa được cấp phép trong Firebase Authentication.");
+        const currentDomain = typeof window !== "undefined" ? window.location.hostname : "tên miền hiện tại";
+        setMessage(`Tên miền "${currentDomain}" chưa được cấp phép (Authorized domain) trong Firebase Authentication.`);
       } else {
         setMessage("Lỗi đăng nhập Google: " + (err.message || "Vui lòng thử lại."));
       }
